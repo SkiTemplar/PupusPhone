@@ -10,6 +10,7 @@ import android.content.pm.ServiceInfo
 import android.os.IBinder
 import android.speech.SpeechRecognizer
 import android.util.Log
+import android.widget.Toast
 import com.pupus.phone.AppSettings
 import com.pupus.phone.BuildConfig
 import com.pupus.phone.R
@@ -70,8 +71,13 @@ class VoiceService : Service(), BridgeClient.Listener, SpeechInput.Callback {
         isForeground = true
         current = this
         wakeLock.acquire()
+        // Car mode is starting: a loopback bridge URL means the bridge lives in Termux on this phone.
+        // The script is idempotent and the BridgeClient backoff connects once it is listening.
+        val termux = TermuxLauncher(this).launchIfNeeded(AppSettings(this))
         connectBridge()
-        VoiceBus.publish(VoiceState.IDLE)
+        VoiceBus.publish(VoiceState.IDLE, termux.message)
+        // The status line is soon overwritten by connection updates: a failure also gets a toast.
+        if (!termux.isSent && termux.message != null) Toast.makeText(this, termux.message, Toast.LENGTH_LONG).show()
         return true
     }
 

@@ -31,6 +31,7 @@ import com.pupus.phone.voice.VoiceUrl
 /** Settings grouped in cards: connection, voice, security and permissions. */
 class SettingsActivity : Activity() {
     private lateinit var settings: AppSettings
+    private lateinit var termuxPanel: TermuxSettingsPanel
     private var isTokenShown = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -40,6 +41,7 @@ class SettingsActivity : Activity() {
         setContentView(R.layout.activity_settings)
         settings = AppSettings(this)
         findViewById<View>(R.id.backButton).setOnClickListener { finish() }
+        termuxPanel = TermuxSettingsPanel(this, settings).apply { bind() }
         bindConnection()
         VoiceSettingsPanel(this, settings).bind()
         bindLanSwitch()
@@ -50,6 +52,11 @@ class SettingsActivity : Activity() {
         super.onResume()
         AppForeground.onResume()
         refreshInfo()
+    }
+
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == TermuxSettingsPanel.TERMUX_PERMISSION_REQUEST) termuxPanel.render()
     }
 
     override fun onPause() {
@@ -123,6 +130,8 @@ class SettingsActivity : Activity() {
         }
         settings.bridgeUrl = url
         settings.bridgeToken = token
+        termuxPanel.save()
+        termuxPanel.render()
         VoiceService.current?.connectBridge()
         Toast.makeText(this, R.string.saved, Toast.LENGTH_SHORT).show()
     }
@@ -144,6 +153,7 @@ class SettingsActivity : Activity() {
             setTextColor(getColor(if (isA11yOn) R.color.status_ok else R.color.status_bad))
         }
         renderDeviceToken()
+        termuxPanel.render()
         val ips = NetworkAddresses.list()
         findViewById<TextView>(R.id.ipText).text =
             if (ips.isEmpty()) getString(R.string.no_ips) else ips.joinToString("\n")

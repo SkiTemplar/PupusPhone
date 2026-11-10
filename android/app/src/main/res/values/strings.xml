@@ -57,6 +57,22 @@
     <string name="mic_permission_missing">Falta el permiso de micrófono</string>
     <string name="error_voice_start">No se puede iniciar el servicio de voz desde aquí: abre la app y activa el modo coche</string>
     <string name="invalid_bridge_url">URL del bridge no válida: usa ws://host:puerto/ruta o wss://host/ruta, con un puerto entre 1 y 65535</string>
+    <string name="termux_launch">Arrancar el bridge en Termux</string>
+    <string name="termux_launch_help">Si la URL del bridge es local (127.0.0.1, localhost o ::1), al activar el modo coche se pide a Termux que ejecute el script. En Termux hay que poner allow-external-apps = true en ~/.termux/termux.properties; si no, Termux rechaza la orden y solo lo avisa con su propia notificación.</string>
+    <string name="termux_script_path">Script de arranque en Termux</string>
+    <string name="termux_grant_permission">Conceder permiso de Termux</string>
+    <string name="termux_status_disabled">Arranque automático desactivado</string>
+    <string name="termux_status_not_loopback">La URL del bridge no es local: no se arranca Termux</string>
+    <string name="termux_status_not_installed">Termux no está instalado</string>
+    <string name="termux_status_permission">Falta el permiso para ejecutar comandos en Termux</string>
+    <string name="termux_status_path">Ruta del script no válida: usa una ruta absoluta o ~/…</string>
+    <string name="termux_status_ready">Listo: Termux arrancará el bridge con el modo coche</string>
+    <string name="termux_starting">Arrancando el bridge en Termux…</string>
+    <string name="termux_error_not_installed">Termux no está instalado: instálalo o desactiva «Arrancar el bridge en Termux»</string>
+    <string name="termux_error_permission">Falta el permiso de Termux: concédelo en Ajustes › Conexión</string>
+    <string name="termux_error_path">Ruta del script de Termux no válida: revísala en Ajustes › Conexión</string>
+    <string name="termux_error_not_found">Termux no acepta comandos externos: actualízalo desde F-Droid o GitHub</string>
+    <string name="termux_error_start">No se pudo pedir a Termux que arranque el bridge desde aquí: abre la app y activa el modo coche</string>
     <string name="reset_needs_car_mode">Activa el modo coche para empezar</string>
 
     <string name="notification_channel">Asistente de voz</string>

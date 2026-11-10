@@ -58,6 +58,28 @@
                     style="@style/SettingsInput"
                     android:importantForAutofill="no"
                     android:inputType="textPassword" />
+                <Switch
+                    android:id="@+id/termuxSwitch"
+                    style="@style/BodyText"
+                    android:layout_marginTop="16dp"
+                    android:minHeight="56dp"
+                    android:text="@string/termux_launch"
+                    android:textStyle="bold" />
+                <TextView style="@style/FieldLabel" android:text="@string/termux_script_path" />
+                <EditText
+                    android:id="@+id/termuxPathInput"
+                    style="@style/SettingsInput"
+                    android:fontFamily="monospace"
+                    android:importantForAutofill="no"
+                    android:inputType="textUri"
+                    android:textSize="14sp" />
+                <TextView android:id="@+id/termuxStatusText" style="@style/BodyText" android:paddingTop="8dp" android:textStyle="bold" />
+                <Button
+                    android:id="@+id/termuxPermissionButton"
+                    style="@style/SecondaryButton"
+                    android:text="@string/termux_grant_permission"
+                    android:visibility="gone" />
+                <TextView style="@style/HelpText" android:text="@string/termux_launch_help" />
                 <Button android:id="@+id/saveButton" style="@style/PrimaryButton" android:layout_marginTop="16dp" android:text="@string/save" />
 
                 <TextView style="@style/FieldLabel" android:paddingTop="24dp" android:text="@string/device_token" />

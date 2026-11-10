@@ -7,6 +7,7 @@ import com.pupus.phone.api.InterfaceAddress
 import com.pupus.phone.api.TokenStore
 import com.pupus.phone.voice.DictationConfig
 import com.pupus.phone.voice.RecognizerMode
+import com.pupus.phone.voice.TermuxRunCommand
 import java.net.Inet4Address
 import java.net.NetworkInterface
 import java.net.SocketException
@@ -62,6 +63,16 @@ class AppSettings(context: Context) {
         get() = RecognizerMode.parse(prefs.getString(KEY_RECOGNIZER, null))
         set(value) = prefs.edit().putString(KEY_RECOGNIZER, value.name).apply()
 
+    /** "Arrancar el bridge en Termux": on car-mode start with a loopback bridge URL. On by default. */
+    var isTermuxLaunchEnabled: Boolean
+        get() = prefs.getBoolean(KEY_TERMUX_LAUNCH, true)
+        set(value) = prefs.edit().putBoolean(KEY_TERMUX_LAUNCH, value).apply()
+
+    /** Script that Termux runs through RUN_COMMAND; blank falls back to the default path. */
+    var termuxScriptPath: String
+        get() = prefs.getString(KEY_TERMUX_SCRIPT, null)?.takeIf { it.isNotBlank() } ?: TermuxRunCommand.DEFAULT_SCRIPT_PATH
+        set(value) = prefs.edit().putString(KEY_TERMUX_SCRIPT, value.trim()).apply()
+
     private companion object {
         const val TAG = "PupusSettings"
         const val PREFS = "pupus"
@@ -71,6 +82,8 @@ class AppSettings(context: Context) {
         const val KEY_ALLOW_LAN = "allow_lan"
         const val KEY_PAUSE_MS = "pause_to_send_ms"
         const val KEY_RECOGNIZER = "recognizer_mode"
+        const val KEY_TERMUX_LAUNCH = "termux_launch"
+        const val KEY_TERMUX_SCRIPT = "termux_script_path"
         val TOKEN_LOCK = Any()
     }
 }

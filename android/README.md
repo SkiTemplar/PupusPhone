@@ -120,6 +120,28 @@ Restricciones de Android que condicionan el diseño:
   dispositivo; si Android lo rechaza, se captura la excepción y el estado dice
   «abre la app y activa el modo coche».
 
+## Arranque del bridge en Termux
+
+Si la URL del bridge apunta al propio móvil (`127.0.0.0/8`, `localhost` o
+`::1`) y está activo «Arrancar el bridge en Termux» (Ajustes › Conexión, activo
+por defecto), cada vez que arranca el modo coche la app envía a Termux un
+intent `RUN_COMMAND` para ejecutar en segundo plano el script configurado
+(por defecto `/data/data/com.termux/files/home/PupusPhone/scripts/termux-start.sh`).
+El script es idempotente y el backoff del `BridgeClient` conecta en cuanto el
+bridge escucha (2-5 s).
+
+- Intent: servicio `com.termux/com.termux.app.RunCommandService`, acción
+  `com.termux.RUN_COMMAND`, extras `com.termux.RUN_COMMAND_PATH` (ruta) y
+  `com.termux.RUN_COMMAND_BACKGROUND` (`true`), según `TermuxConstants` de
+  termux-app. La decisión vive en `TermuxLaunchPolicy` (con tests).
+- Requisitos: Termux instalado, el permiso en tiempo de ejecución
+  `com.termux.permission.RUN_COMMAND` (botón en Ajustes) y, en Termux,
+  `allow-external-apps = true` en `~/.termux/termux.properties`
+  (`termux-reload-settings` para aplicarlo). Sin esa propiedad, Termux rechaza
+  la orden y solo lo avisa con su propia notificación: la app no puede
+  detectarlo y el chip del bridge sigue en «desconectado».
+- El script tiene que ser ejecutable (`chmod +x`).
+
 ## Limitaciones conocidas
 
 - Sin probar aún en un dispositivo real (fase 0): solo tests JVM y compilación.

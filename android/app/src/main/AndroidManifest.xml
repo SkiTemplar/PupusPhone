@@ -8,9 +8,12 @@
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
+    <!-- Termux RUN_COMMAND: starts the voice bridge in Termux (phone-only mode). Runtime permission. -->
+    <uses-permission android:name="com.termux.permission.RUN_COMMAND" />
 
-    <!-- Android 11+ package visibility: launcher apps, speech recognizer and TTS engines. -->
+    <!-- Android 11+ package visibility: launcher apps, speech recognizer, TTS engines and Termux. -->
     <queries>
+        <package android:name="com.termux" />
         <intent>
             <action android:name="android.intent.action.MAIN" />
             <category android:name="android.intent.category.LAUNCHER" />
