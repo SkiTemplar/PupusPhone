@@ -1,4 +1,0 @@
-# Tokens de prueba en tests (RouteHandlerTest, TermuxSetupCommandTest): no son secretos.
-fbb66aa69522a319abb1dcc436e98ebcb655ec9b:android/app/src/test/java/com/pupus/phone/voice/TermuxSetupCommandTest.kt:generic-api-key:10
-fbb66aa69522a319abb1dcc436e98ebcb655ec9b:android/app/src/test/java/com/pupus/phone/voice/TermuxSetupCommandTest.kt:generic-api-key:11
-74611b8fd3db069ed28c017a3213e7d49fa47898:android/app/src/test/java/com/pupus/phone/api/RouteHandlerTest.kt:generic-api-key:33
