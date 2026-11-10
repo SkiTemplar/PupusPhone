@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#FF101418"
+    android:orientation="vertical"
+    android:padding="16dp">
+
+    <TextView
+        android:id="@+id/stateText"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:textColor="#FFFFFFFF"
+        android:textSize="32sp"
+        android:textStyle="bold" />
+
+    <TextView
+        android:id="@+id/statusText"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:maxLines="3"
+        android:minLines="2"
+        android:textColor="#FFB0BEC5"
+        android:textSize="18sp" />
+
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1">
+
+        <com.pupus.phone.ui.SquareButton
+            android:id="@+id/pttButton"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_gravity="center"
+            android:contentDescription="@string/push_to_talk_description"
+            android:text="@string/push_to_talk"
+            android:textColor="#FFFFFFFF"
+            android:textSize="40sp" />
+    </FrameLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <Switch
+            android:id="@+id/carModeSwitch"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="@string/car_mode"
+            android:textColor="#FFFFFFFF"
+            android:textSize="20sp" />
+
+        <Button
+            android:id="@+id/settingsToggle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/settings" />
+    </LinearLayout>
+
+    <ScrollView
+        android:id="@+id/settingsPanel"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:visibility="gone">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/accessibilityText"
+                style="@style/SettingsText" />
+
+            <Button android:id="@+id/permissionsButton" style="@style/SettingsButton" android:text="@string/grant_permissions" />
+            <Button android:id="@+id/accessibilityButton" style="@style/SettingsButton" android:text="@string/open_accessibility" />
+            <Button android:id="@+id/batteryButton" style="@style/SettingsButton" android:text="@string/open_battery" />
+            <Button android:id="@+id/resetButton" style="@style/SettingsButton" android:text="@string/new_conversation" />
+
+            <TextView style="@style/SettingsText" android:text="@string/bridge_url" />
+            <EditText
+                android:id="@+id/bridgeUrlInput"
+                style="@style/SettingsInput"
+                android:hint="@string/bridge_url_hint"
+                android:inputType="textUri" />
+
+            <TextView style="@style/SettingsText" android:text="@string/bridge_token" />
+            <EditText
+                android:id="@+id/bridgeTokenInput"
+                style="@style/SettingsInput"
+                android:inputType="textPassword" />
+
+            <Button android:id="@+id/saveButton" style="@style/SettingsButton" android:text="@string/save" />
+
+            <TextView style="@style/SettingsText" android:text="@string/device_token" />
+            <TextView
+                android:id="@+id/deviceTokenText"
+                style="@style/SettingsText"
+                android:fontFamily="monospace"
+                android:textIsSelectable="true" />
+            <Button android:id="@+id/copyTokenButton" style="@style/SettingsButton" android:text="@string/copy" />
+
+            <TextView style="@style/SettingsText" android:text="@string/device_ips" />
+            <TextView
+                android:id="@+id/ipText"
+                style="@style/SettingsText"
+                android:fontFamily="monospace"
+                android:textIsSelectable="true" />
+
+            <Switch
+                android:id="@+id/allowLanSwitch"
+                style="@style/SettingsText"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/allow_lan" />
+            <TextView style="@style/SettingsText" android:text="@string/allow_lan_warning" />
+        </LinearLayout>
+    </ScrollView>
+</LinearLayout>

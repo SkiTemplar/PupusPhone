@@ -1,0 +1,13 @@
+{
+  "name": "@pupusphone/fake-phone",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "In-memory implementation of the PupusPhone Device API for development and tests.",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "bin": {
+    "pupusphone-fake-phone": "./src/cli.ts"
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "name": "@pupusphone/bridge",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Voice WebSocket bridge between the PupusPhone app and a persistent Claude Code process.",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "bin": {
+    "pupusphone-bridge": "./src/cli.ts"
+  },
+  "dependencies": {
+    "ws": "^8.22.2"
+  },
+  "devDependencies": {
+    "@pupusphone/fake-phone": "0.1.0"
+  }
+}

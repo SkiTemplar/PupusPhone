@@ -1,0 +1,20 @@
+{
+  "name": "pupusphone-mcp",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "MCP server (stdio) that controls an Android phone through the PupusPhone Device API.",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "bin": {
+    "pupusphone-mcp": "./src/cli.ts"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.32.2",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@pupusphone/fake-phone": "0.1.0"
+  }
+}

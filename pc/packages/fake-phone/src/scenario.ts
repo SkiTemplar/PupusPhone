@@ -1,0 +1,167 @@
+import type { NodeDef, Scenario } from './types.ts';
+
+const W = 1080;
+const H = 2400;
+
+function statusBar(): NodeDef {
+  return {
+    cls: 'FrameLayout',
+    resId: 'status_bar',
+    bounds: [0, 0, W, 80],
+    children: [{ cls: 'TextView', text: '12:30', resId: 'clock', bounds: [40, 10, 200, 70] }],
+  };
+}
+
+function appIcon(label: string, pkg: string, col: number, row: number): NodeDef {
+  const left = 60 + col * 250;
+  const top = 1800 + row * 280;
+  return {
+    cls: 'TextView',
+    text: label,
+    desc: label,
+    bounds: [left, top, left + 210, top + 240],
+    flags: ['clickable'],
+    onTap: { launch: pkg },
+  };
+}
+
+const launcher: NodeDef = {
+  cls: 'FrameLayout',
+  bounds: [0, 0, W, H],
+  children: [
+    statusBar(),
+    {
+      cls: 'RecyclerView',
+      resId: 'workspace',
+      bounds: [0, 80, W, 2300],
+      flags: ['scrollable'],
+      children: [
+        appIcon('Spotify', 'com.spotify.music', 0, 0),
+        appIcon('WhatsApp', 'com.whatsapp', 1, 0),
+        appIcon('Teléfono', 'com.google.android.dialer', 2, 0),
+        appIcon('Maps', 'com.google.android.apps.maps', 3, 0),
+      ],
+    },
+  ],
+};
+
+const spotifyHome: NodeDef = {
+  cls: 'FrameLayout',
+  bounds: [0, 0, W, H],
+  children: [
+    statusBar(),
+    { cls: 'TextView', text: 'Buenas tardes', resId: 'title', bounds: [40, 120, 700, 200] },
+    {
+      cls: 'Button',
+      desc: 'Buscar',
+      resId: 'search_tab',
+      bounds: [270, 2250, 540, 2400],
+      flags: ['clickable'],
+      onTap: { screen: 'spotify-search' },
+    },
+    {
+      cls: 'ImageButton',
+      desc: 'Reproducir',
+      resId: 'play_pause_button',
+      bounds: [900, 2100, 1040, 2220],
+      flags: ['clickable'],
+    },
+  ],
+};
+
+const spotifySearch: NodeDef = {
+  cls: 'FrameLayout',
+  bounds: [0, 0, W, H],
+  children: [
+    statusBar(),
+    {
+      cls: 'EditText',
+      text: '¿Qué te apetece escuchar?',
+      resId: 'query',
+      bounds: [40, 120, 1040, 240],
+      flags: ['clickable', 'editable', 'focused'],
+    },
+    {
+      cls: 'RecyclerView',
+      resId: 'results',
+      bounds: [0, 260, W, 2200],
+      flags: ['scrollable'],
+    },
+  ],
+};
+
+const whatsappChats: NodeDef = {
+  cls: 'FrameLayout',
+  bounds: [0, 0, W, H],
+  children: [
+    statusBar(),
+    { cls: 'TextView', text: 'WhatsApp', resId: 'toolbar_title', bounds: [40, 100, 500, 200] },
+    {
+      cls: 'ListView',
+      resId: 'conversations',
+      bounds: [0, 220, W, 2300],
+      flags: ['scrollable'],
+      children: [
+        {
+          cls: 'LinearLayout',
+          resId: 'contact_row',
+          bounds: [0, 220, W, 400],
+          flags: ['clickable'],
+          children: [
+            { cls: 'TextView', text: 'Mamá', resId: 'conversation_contact_name', bounds: [200, 240, 700, 300] },
+            { cls: 'TextView', text: '¿Llegas a cenar?', resId: 'single_msg_tv', bounds: [200, 310, 900, 380] },
+          ],
+        },
+      ],
+    },
+  ],
+};
+
+const dialer: NodeDef = {
+  cls: 'FrameLayout',
+  bounds: [0, 0, W, H],
+  children: [
+    statusBar(),
+    { cls: 'EditText', resId: 'digits', bounds: [40, 300, 1040, 450], flags: ['editable'] },
+    { cls: 'ImageButton', desc: 'Llamar', resId: 'dialpad_floating_action_button', bounds: [440, 2100, 640, 2300], flags: ['clickable'] },
+  ],
+};
+
+const maps: NodeDef = {
+  cls: 'FrameLayout',
+  bounds: [0, 0, W, H],
+  children: [
+    statusBar(),
+    { cls: 'EditText', text: 'Busca aquí', resId: 'search_omnibox_text_box', bounds: [40, 120, 1040, 240], flags: ['clickable', 'editable'] },
+  ],
+};
+
+/** Default scenario: launcher with four apps; Spotify has a home and a search screen. */
+export function defaultScenario(): Scenario {
+  return {
+    size: { width: W, height: H },
+    homeScreen: 'launcher',
+    screens: {
+      launcher: { package: 'com.google.android.apps.nexuslauncher', root: launcher },
+      spotify: { package: 'com.spotify.music', root: spotifyHome },
+      'spotify-search': { package: 'com.spotify.music', root: spotifySearch },
+      whatsapp: { package: 'com.whatsapp', root: whatsappChats },
+      dialer: { package: 'com.google.android.dialer', root: dialer },
+      maps: { package: 'com.google.android.apps.maps', root: maps },
+    },
+    apps: [
+      { package: 'com.spotify.music', label: 'Spotify', screen: 'spotify' },
+      { package: 'com.whatsapp', label: 'WhatsApp', screen: 'whatsapp' },
+      { package: 'com.google.android.dialer', label: 'Teléfono', screen: 'dialer' },
+      { package: 'com.google.android.apps.maps', label: 'Maps', screen: 'maps' },
+    ],
+    uriHandlers: {
+      'spotify:': 'com.spotify.music',
+      'whatsapp:': 'com.whatsapp',
+      'https://wa.me/': 'com.whatsapp',
+      'tel:': 'com.google.android.dialer',
+      'geo:': 'com.google.android.apps.maps',
+      'google.navigation:': 'com.google.android.apps.maps',
+    },
+  };
+}
