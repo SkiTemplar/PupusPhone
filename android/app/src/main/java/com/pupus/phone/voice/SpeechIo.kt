@@ -2,6 +2,7 @@ package com.pupus.phone.voice
 
 import android.content.Context
 import android.media.AudioAttributes
+import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.speech.tts.TextToSpeech
@@ -14,12 +15,15 @@ internal const val LANGUAGE_TAG = "es-ES"
 /**
  * Queued es-ES TextToSpeech. [onDrained] runs on the main thread when the current
  * turn has nothing left to say; [onFailed] runs once if the engine cannot start.
+ * Plays as USAGE_ASSISTANT + CONTENT_TYPE_SPEECH (the media volume, as the Google Assistant)
+ * at [volume] (TextToSpeech KEY_PARAM_VOLUME, 0.0 to 1.0, read for every utterance).
  * Must be used from the main thread.
  */
 class SpeechOutput(
     context: Context,
     private val onDrained: () -> Unit,
     private val onFailed: () -> Unit,
+    private val volume: () -> Float = { 1.0f },
 ) {
     private enum class EngineState { INITIALIZING, READY, FAILED }
 
@@ -90,7 +94,8 @@ class SpeechOutput(
 
     private fun speakNow(text: String) {
         val id = tracker.next()
-        val result = tts.speak(text, TextToSpeech.QUEUE_ADD, null, id)
+        val params = Bundle().apply { putFloat(TextToSpeech.Engine.KEY_PARAM_VOLUME, volume().coerceIn(0f, 1f)) }
+        val result = tts.speak(text, TextToSpeech.QUEUE_ADD, params, id)
         if (result != TextToSpeech.SUCCESS) {
             Log.e(TAG, "TTS speak failed for $id")
             onUtteranceFinished(id)

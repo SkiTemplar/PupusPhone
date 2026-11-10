@@ -99,8 +99,11 @@ Bridge → móvil:
 | `ready` | `model:string` | Proceso de Claude listo. |
 | `say` | `id`, `text` | Frase completa para TTS (se emite por frases, no por tokens). |
 | `status` | `id`, `text` | Estado breve no hablado («Abriendo Spotify…»), derivado de la herramienta en uso. |
-| `done` | `id`, `durationMs` | Fin del turno. |
+| `done` | `id`, `durationMs`, `silent?:true` | Fin del turno. `silent` solo aparece cuando la orden se ha cumplido sin nada que decir (el modelo respondió `[ok]`): no hubo `say` ni `error` y el móvil no habla ni pide foco de audio. |
 | `error` | `id?`, `message` | Error; el móvil lo lee en voz alta. |
+
+El marcador `[ok]` (con cualquier mayúscula, espacios o puntuación alrededor) nunca se envía en un `say`;
+si va acompañado de texto, se habla solo el texto.
 
 Un turno en curso más una `utterance` nueva: el bridge interrumpe el turno
 anterior y atiende la nueva.

@@ -3,6 +3,7 @@ import { NarrationGate } from './narration-gate.ts';
 import type { ClaudeProcessHandlers } from './claude-process.ts';
 import { log } from './log.ts';
 import type { ServerFrame } from './protocol.ts';
+import { scanOkMarker } from './silent-reply.ts';
 import { toolStatus } from './status.ts';
 import type { ClaudeEvent } from './stream-parser.ts';
 
@@ -31,6 +32,10 @@ interface Turn {
   readonly chunker: SentenceChunker;
   readonly gate: NarrationGate;
   cancelled: boolean;
+  /** The model answered `[ok]`: the order is done and there is nothing to say. */
+  sawOkMarker: boolean;
+  /** A `say` or `error` frame was sent for this turn. */
+  spoke: boolean;
   timers: ReturnType<typeof setTimeout>[];
 }
 
@@ -137,7 +142,7 @@ export class VoiceSession {
     if (!this.pending || this.turn || !this.isReady || !this.proc) return;
     const { id, text, receivedAt } = this.pending;
     this.pending = null;
-    const turn: Turn = { id, startedAt: receivedAt, chunker: new SentenceChunker(), gate: new NarrationGate(), cancelled: false, timers: [] };
+    const turn: Turn = { id, startedAt: receivedAt, chunker: new SentenceChunker(), gate: new NarrationGate(), cancelled: false, sawOkMarker: false, spoke: false, timers: [] };
     turn.timers.push(setTimeout(() => this.onTurnTimeout(id), this.opts.turnTimeoutMs));
     this.turn = turn;
     this.proc.sendUser(text);
@@ -169,6 +174,7 @@ export class VoiceSession {
   private onTurnTimeout(id: string): void {
     const turn = this.turn;
     if (!turn || turn.id !== id || turn.cancelled) return;
+    turn.spoke = true;
     this.opts.send({ type: 'error', id, message: MSG_TIMEOUT });
     this.cancelTurn();
   }
@@ -178,7 +184,9 @@ export class VoiceSession {
     if (!turn) return;
     for (const timer of turn.timers) clearTimeout(timer);
     this.turn = null;
-    this.opts.send({ type: 'done', id: turn.id, durationMs: Date.now() - turn.startedAt });
+    const durationMs = Date.now() - turn.startedAt;
+    const isSilent = turn.sawOkMarker && !turn.spoke && !turn.cancelled;
+    this.opts.send(isSilent ? { type: 'done', id: turn.id, durationMs, silent: true } : { type: 'done', id: turn.id, durationMs });
   }
 
   private activeTurn(): Turn | null {
@@ -187,7 +195,18 @@ export class VoiceSession {
 
   /** Routes sentences through the narration gate; only the released ones are spoken. */
   private speak(turn: Turn, sentences: readonly string[]): void {
-    for (const text of turn.gate.push(sentences)) this.opts.send({ type: 'say', id: turn.id, text });
+    this.say(turn, turn.gate.push(sentences));
+  }
+
+  /** Sends `say` frames; the `[ok]` marker is never spoken. */
+  private say(turn: Turn, sentences: readonly string[]): void {
+    for (const sentence of sentences) {
+      const { speech, hasMarker } = scanOkMarker(sentence);
+      if (hasMarker) turn.sawOkMarker = true;
+      if (speech === null) continue;
+      turn.spoke = true;
+      this.opts.send({ type: 'say', id: turn.id, text: speech });
+    }
   }
 
   /** A tool call follows: text still held was the model narrating its steps, not an answer. */
@@ -235,9 +254,10 @@ export class VoiceSession {
     if (!turn) return;
     if (!turn.cancelled) {
       this.speak(turn, turn.chunker.flush());
-      for (const text of turn.gate.flush()) this.opts.send({ type: 'say', id: turn.id, text });
+      this.say(turn, turn.gate.flush());
       if (event.isError) {
         log.warn(`turn ${turn.id} ended with ${event.subtype}: ${event.text ?? ''}`);
+        turn.spoke = true;
         this.opts.send({ type: 'error', id: turn.id, message: MSG_TURN_FAILED });
       }
     }
@@ -250,7 +270,10 @@ export class VoiceSession {
     this.proc = null;
     if (this.stopped) return;
     const turn = this.turn;
-    if (turn && !turn.cancelled) this.opts.send({ type: 'error', id: turn.id, message: MSG_RESTARTED });
+    if (turn && !turn.cancelled) {
+      turn.spoke = true;
+      this.opts.send({ type: 'error', id: turn.id, message: MSG_RESTARTED });
+    }
     if (turn) this.endTurn();
     const backoff = this.opts.backoffMs ?? DEFAULT_BACKOFF;
     const delay = backoff[Math.min(this.crashes, backoff.length - 1)] ?? 1000;

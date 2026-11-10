@@ -12,12 +12,15 @@ import android.util.Log
  * The system recognizer plays its own earcon on every segment restart, so its streams are
  * muted while the microphone is open (after the start chime, until right before the end
  * chime). Also handles transient audio focus: music pauses while listening and ducks
- * while speaking. Main thread only.
+ * while speaking (released as soon as the speech drains). The voice uses USAGE_ASSISTANT,
+ * which follows the media volume: nothing stays muted while it speaks and, if enabled in
+ * the settings, a low media volume is raised for the turn. Main thread only.
  */
 class AudioCues(context: Context) {
     private val audio: AudioManager = context.getSystemService(AudioManager::class.java)
     private val tones = TonePlayer()
     private val muter = earconMuter(context)
+    private val turnAudio = TurnAudio(muter, MediaVolumeBoost(AudioManagerMedia(audio)))
     private var focus: AudioFocusRequest? = null
     private var focusGain = 0
 
@@ -37,12 +40,22 @@ class AudioCues(context: Context) {
         release()
     }
 
-    /** Ducks music while the assistant speaks. */
-    fun speechStarted() = acquire(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK)
+    /** Unmutes, optionally raises a low media volume and ducks music while the assistant speaks. */
+    fun speechStarted(minMediaPercent: Int) {
+        turnAudio.beforeSpeech(minMediaPercent)
+        acquire(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK)
+        logLevels()
+    }
 
-    /** Also unmutes: every exit path (abort, error, destroy) goes through here. */
+    /** Plays the end chime alone: a silent turn (`done` with `silent`) takes no audio focus. */
+    fun silentDone() = tones.play(TonePlayer.Cue.END)
+
+    /**
+     * Also unmutes and restores the media volume: every exit path (speech drained, abort,
+     * error, destroy) goes through here.
+     */
     fun release() {
-        muter.restore()
+        turnAudio.release()
         val request = focus ?: return
         audio.abandonAudioFocusRequest(request)
         focus = null
@@ -67,6 +80,15 @@ class AudioCues(context: Context) {
         if (result != AudioManager.AUDIOFOCUS_REQUEST_GRANTED) Log.w(TAG, "Audio focus $gain not granted: $result")
         focus = request
         focusGain = gain
+    }
+
+    private fun logLevels() {
+        val music = AudioManager.STREAM_MUSIC
+        Log.i(
+            TAG,
+            "Speaking: media ${audio.getStreamVolume(music)}/${audio.getStreamMaxVolume(music)}, " +
+                "media muted ${audio.isStreamMute(music)}, ringer mode ${audio.ringerMode}",
+        )
     }
 
     companion object {
@@ -106,6 +128,20 @@ class AudioCues(context: Context) {
                 Log.w(TAG, "Cannot ${if (isMuted) "mute" else "unmute"} stream $stream", e)
                 false
             }
+        }
+    }
+
+    private class AudioManagerMedia(private val audio: AudioManager) : MediaVolume {
+        override val current: Int get() = audio.getStreamVolume(AudioManager.STREAM_MUSIC)
+        override val min: Int get() = audio.getStreamMinVolume(AudioManager.STREAM_MUSIC)
+        override val max: Int get() = audio.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
+
+        override fun set(index: Int): Boolean = try {
+            audio.setStreamVolume(AudioManager.STREAM_MUSIC, index, 0)
+            true
+        } catch (e: SecurityException) {
+            Log.w(TAG, "Cannot set the media volume", e)
+            false
         }
     }
 

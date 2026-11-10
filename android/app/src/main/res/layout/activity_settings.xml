@@ -173,6 +173,31 @@
                     <RadioButton android:id="@+id/recognizerOnDevice" style="@style/Choice" android:text="@string/recognizer_on_device" />
                     <RadioButton android:id="@+id/recognizerDefault" style="@style/Choice" android:text="@string/recognizer_default" />
                 </RadioGroup>
+
+                <TextView android:id="@+id/ttsVolumeLabel" style="@style/BodyText" android:paddingTop="24dp" android:textStyle="bold" />
+                <SeekBar
+                    android:id="@+id/ttsVolumeSeek"
+                    android:layout_width="match_parent"
+                    android:layout_height="56dp"
+                    android:contentDescription="@string/tts_volume_help" />
+                <TextView style="@style/HelpText" android:text="@string/tts_volume_help" />
+
+                <TextView android:id="@+id/minMediaLabel" style="@style/BodyText" android:paddingTop="24dp" android:textStyle="bold" />
+                <SeekBar
+                    android:id="@+id/minMediaSeek"
+                    android:layout_width="match_parent"
+                    android:layout_height="56dp"
+                    android:contentDescription="@string/min_media_volume_help" />
+                <TextView style="@style/HelpText" android:text="@string/min_media_volume_help" />
+
+                <Switch
+                    android:id="@+id/silentToneSwitch"
+                    style="@style/BodyText"
+                    android:layout_marginTop="16dp"
+                    android:minHeight="56dp"
+                    android:text="@string/silent_done_tone"
+                    android:textStyle="bold" />
+                <TextView style="@style/HelpText" android:text="@string/silent_done_tone_help" />
             </LinearLayout>
 
             <!-- Seguridad -->

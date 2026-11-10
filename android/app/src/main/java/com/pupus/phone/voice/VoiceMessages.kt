@@ -10,7 +10,8 @@ sealed class BridgeMessage {
     data class Ready(val model: String) : BridgeMessage()
     data class Say(val id: String, val text: String) : BridgeMessage()
     data class Status(val id: String, val text: String) : BridgeMessage()
-    data class Done(val id: String, val durationMs: Long) : BridgeMessage()
+    /** [isSilent]: the order was carried out with nothing to say; the phone must not speak. */
+    data class Done(val id: String, val durationMs: Long, val isSilent: Boolean = false) : BridgeMessage()
     data class Error(val id: String?, val message: String) : BridgeMessage()
 
     /** Frame that is not valid JSON, lacks required fields or has an unknown type. */
@@ -55,7 +56,7 @@ object VoiceMessages {
     private fun decodeDone(o: JSONObject): BridgeMessage {
         val id = stringOrNull(o, "id") ?: return BridgeMessage.Invalid("missing id")
         val duration = (o.opt("durationMs") as? Number)?.toLong() ?: 0L
-        return BridgeMessage.Done(id, duration)
+        return BridgeMessage.Done(id, duration, isSilent = o.opt("silent") == true)
     }
 
     private fun decodeError(o: JSONObject): BridgeMessage {

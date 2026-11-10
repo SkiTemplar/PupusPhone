@@ -10,7 +10,8 @@ export type ServerFrame =
   | { readonly type: 'ready'; readonly model: string }
   | { readonly type: 'say'; readonly id: string; readonly text: string }
   | { readonly type: 'status'; readonly id: string; readonly text: string }
-  | { readonly type: 'done'; readonly id: string; readonly durationMs: number }
+  /** `silent`: the order was carried out and there is nothing to say (the model answered `[ok]`). */
+  | { readonly type: 'done'; readonly id: string; readonly durationMs: number; readonly silent?: true }
   | { readonly type: 'error'; readonly id?: string; readonly message: string };
 
 const MAX_ID = 128;

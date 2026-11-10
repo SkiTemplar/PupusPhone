@@ -5,6 +5,7 @@
 //   "sordo"            stream slowly; ignores interrupts (forces kill + --resume)
 //   "crash"            exit(3) in the middle of the turn
 //   "falla"            error result (error_max_turns)
+//   "siguiente"        replay fixtures/turn-silent.jsonl (tool call, then the `[ok]` marker)
 //   anything else      replay fixtures/turn-launch.jsonl
 import { appendFileSync, readFileSync, writeFileSync } from 'node:fs';
 import { createInterface } from 'node:readline';
@@ -53,6 +54,11 @@ function handleUser(text) {
     return setTimeout(() => process.exit(3), 20);
   }
   if (text.includes('falla')) return emit(result('error_max_turns'));
+  if (text.includes('siguiente')) {
+    for (const line of fixture('turn-silent.jsonl').slice(1)) process.stdout.write(`${line}
+`);
+    return;
+  }
   for (const line of fixture('turn-launch.jsonl').slice(1)) process.stdout.write(`${line}\n`);
 }
 

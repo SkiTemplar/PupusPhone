@@ -44,6 +44,18 @@ class VoiceMessagesTest {
     }
 
     @Test
+    fun decodesSilentDone() {
+        assertEquals(
+            BridgeMessage.Done("t1", 80, isSilent = true),
+            VoiceMessages.decode("""{"type":"done","id":"t1","durationMs":80,"silent":true}"""),
+        )
+        val spoken = VoiceMessages.decode("""{"type":"done","id":"t1","durationMs":80}""") as BridgeMessage.Done
+        assertEquals(false, spoken.isSilent)
+        val notBoolean = VoiceMessages.decode("""{"type":"done","id":"t1","silent":"true"}""") as BridgeMessage.Done
+        assertEquals(false, notBoolean.isSilent)
+    }
+
+    @Test
     fun rejectsInvalidFrames() {
         assertTrue(VoiceMessages.decode("not json") is BridgeMessage.Invalid)
         assertTrue(VoiceMessages.decode("""{"type":"whatever"}""") is BridgeMessage.Invalid)

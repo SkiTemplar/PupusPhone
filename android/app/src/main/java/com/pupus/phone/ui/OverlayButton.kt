@@ -7,6 +7,7 @@ import android.graphics.PixelFormat
 import android.util.Log
 import android.view.Gravity
 import android.view.HapticFeedbackConstants
+import android.view.InputDevice
 import android.view.MotionEvent
 import android.view.View
 import android.view.ViewConfiguration
@@ -50,6 +51,8 @@ object AppForeground {
  * screen (72 dp plus glow room); it snaps to the nearest side edge when released.
  * While dragging, a ✕ target appears at the bottom; dropping the bubble on it turns car
  * mode off and hides the bubble until car mode is started again.
+ * It takes no touches while a turn runs or a device API gesture is in flight, and only real
+ * finger touches (see [OverlayTouchPolicy]): the assistant's own taps must not start listening.
  */
 class OverlayButton(private val service: AccessibilityService) {
     private val windowManager = service.getSystemService(WindowManager::class.java)
@@ -118,6 +121,7 @@ class OverlayButton(private val service: AccessibilityService) {
         }
         view = button
         updateVisibility.run()
+        OverlayTouchGate.setListener(::applyTouchability)
         AppForeground.addListener(foregroundListener)
         VoiceBus.addListener(listener)
         VoiceBus.addDetailsListener(detailsListener)
@@ -125,6 +129,7 @@ class OverlayButton(private val service: AccessibilityService) {
     }
 
     fun hide() {
+        OverlayTouchGate.setListener(null)
         AppForeground.removeListener(foregroundListener)
         VoiceBus.removeListener(listener)
         VoiceBus.removeDetailsListener(detailsListener)
@@ -148,6 +153,28 @@ class OverlayButton(private val service: AccessibilityService) {
         // Car mode keeps the screen on through this window while another app is in front.
         current.keepScreenOn = state != VoiceState.STOPPED
         updateVisibility.run()
+        applyTouchability()
+    }
+
+    /** Toggles FLAG_NOT_TOUCHABLE: untouchable, injected taps go to the app below. True if it changed. */
+    private fun applyTouchability(): Boolean {
+        val current = view ?: return false
+        val accepts = OverlayTouchPolicy.acceptsTouches(state, OverlayTouchGate.gesturesInFlight)
+        val flags = if (accepts) {
+            params.flags and WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE.inv()
+        } else {
+            params.flags or WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE
+        }
+        if (flags == params.flags) return false
+        params.flags = flags
+        if (!accepts) endDrag()
+        if (!current.isAttachedToWindow) return true
+        try {
+            windowManager.updateViewLayout(current, params)
+        } catch (e: IllegalArgumentException) {
+            Log.w(TAG, "Overlay not attached while changing touchability", e)
+        }
+        return true
     }
 
     @SuppressLint("ClickableViewAccessibility")
@@ -158,7 +185,10 @@ class OverlayButton(private val service: AccessibilityService) {
         var originX = 0
         var originY = 0
         var isDragging = false
+        var isIgnored = false
         button.setOnTouchListener { v, event ->
+            if (event.actionMasked == MotionEvent.ACTION_DOWN) isIgnored = !isRealFinger(event)
+            if (isIgnored) return@setOnTouchListener true
             when (event.actionMasked) {
                 MotionEvent.ACTION_DOWN -> {
                     snapAnimator?.cancel()
@@ -186,6 +216,17 @@ class OverlayButton(private val service: AccessibilityService) {
             }
             true
         }
+    }
+
+    private fun isRealFinger(event: MotionEvent): Boolean {
+        val isReal = OverlayTouchPolicy.isRealFinger(
+            deviceId = event.deviceId,
+            flags = event.flags,
+            toolType = event.getToolType(0),
+            isFromTouchscreen = event.isFromSource(InputDevice.SOURCE_TOUCHSCREEN),
+        )
+        if (!isReal) Log.i(TAG, "Ignoring synthetic touch (device ${event.deviceId}, flags ${event.flags})")
+        return isReal
     }
 
     /** Follows the finger, pulled onto the dismiss target when close enough. */

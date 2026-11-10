@@ -58,6 +58,20 @@ describe('turns', () => {
     expect(tb.readFile('utterances.log')).toBe('pon música\n');
   });
 
+  it('marks a normal spoken turn as not silent', async () => {
+    phone.send({ type: 'utterance', id: 'u1', text: 'pon música' });
+    await phone.waitDone('u1');
+    expect(phone.framesFor('u1').at(-1)).not.toHaveProperty('silent');
+  });
+
+  it('does not speak the [ok] marker and ends the turn with done silent', async () => {
+    phone.send({ type: 'utterance', id: 'u1', text: 'siguiente canción' });
+    await phone.waitDone('u1');
+    const frames = phone.framesFor('u1');
+    expect(frames.map((f) => f.type)).toEqual(['status', 'done']);
+    expect(frames.at(-1)).toMatchObject({ type: 'done', id: 'u1', silent: true });
+  });
+
   it('launches claude isolated from the user configuration', async () => {
     const args = await eventually(() => JSON.parse(tb.readFile('args.json')) as string[]);
     const value = (flag: string): string | undefined => args[args.indexOf(flag) + 1];

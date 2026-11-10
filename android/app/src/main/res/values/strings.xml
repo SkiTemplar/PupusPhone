@@ -26,6 +26,7 @@
     <string name="push_to_talk_description">Pulsa para dictar; vuelve a pulsar para enviar ya</string>
     <string name="status_dictating">Dicta; toca otra vez para enviar ya</string>
     <string name="status_nothing_heard">No he oído nada</string>
+    <string name="status_done_silent">Hecho</string>
 
     <string name="car_mode">Modo coche</string>
     <string name="settings">Ajustes</string>
@@ -106,6 +107,14 @@
 
     <string name="pause_to_send">Pausa para enviar: %1$s s</string>
     <string name="pause_to_send_help">Segundos de silencio tras los que se envía lo dictado.</string>
+    <string name="tts_volume">Volumen de la voz: %1$d %%</string>
+    <string name="tts_volume_help">Volumen del sintetizador sobre el volumen multimedia, como el de «Ok Google». La música se atenúa mientras habla.</string>
+    <string name="min_media_volume">Volumen multimedia mínimo al hablar: %1$s</string>
+    <string name="min_media_volume_percent">%1$d %%</string>
+    <string name="min_media_volume_off">desactivado</string>
+    <string name="min_media_volume_help">Si el volumen multimedia está por debajo, se sube mientras habla el asistente y se restaura al terminar.</string>
+    <string name="silent_done_tone">Tono al terminar sin respuesta hablada</string>
+    <string name="silent_done_tone_help">Cuando la orden se cumple sin nada que decir (pasar de canción, abrir una app…), el asistente no habla para no cortar la música.</string>
     <string name="recognizer_title">Reconocedor de voz</string>
     <string name="recognizer_auto">Automático (en el dispositivo si tiene español)</string>
     <string name="recognizer_on_device">Forzar en el dispositivo</string>

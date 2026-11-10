@@ -8,6 +8,7 @@ import com.pupus.phone.api.TokenStore
 import com.pupus.phone.voice.DictationConfig
 import com.pupus.phone.voice.RecognizerMode
 import com.pupus.phone.voice.TermuxRunCommand
+import com.pupus.phone.voice.VoiceVolumeConfig
 import java.net.Inet4Address
 import java.net.NetworkInterface
 import java.net.SocketException
@@ -63,6 +64,21 @@ class AppSettings(context: Context) {
         get() = RecognizerMode.parse(prefs.getString(KEY_RECOGNIZER, null))
         set(value) = prefs.edit().putString(KEY_RECOGNIZER, value.name).apply()
 
+    /** "Volumen de la voz": TextToSpeech volume in percent of the media volume. 100 by default. */
+    var ttsVolumePercent: Int
+        get() = VoiceVolumeConfig.clampPercent(prefs.getInt(KEY_TTS_VOLUME, VoiceVolumeConfig.DEFAULT_TTS_PERCENT))
+        set(value) = prefs.edit().putInt(KEY_TTS_VOLUME, VoiceVolumeConfig.clampPercent(value)).apply()
+
+    /** "Volumen multimedia mínimo al hablar": raised for the turn if lower. 0 (off) by default. */
+    var minMediaVolumePercent: Int
+        get() = VoiceVolumeConfig.clampPercent(prefs.getInt(KEY_MIN_MEDIA, VoiceVolumeConfig.DEFAULT_MIN_MEDIA_PERCENT))
+        set(value) = prefs.edit().putInt(KEY_MIN_MEDIA, VoiceVolumeConfig.clampPercent(value)).apply()
+
+    /** "Tono al terminar sin hablar": end chime for silent turns (`done` with `silent`). On by default. */
+    var isSilentDoneToneEnabled: Boolean
+        get() = prefs.getBoolean(KEY_SILENT_TONE, true)
+        set(value) = prefs.edit().putBoolean(KEY_SILENT_TONE, value).apply()
+
     /** "Arrancar el bridge en Termux": on car-mode start with a loopback bridge URL. On by default. */
     var isTermuxLaunchEnabled: Boolean
         get() = prefs.getBoolean(KEY_TERMUX_LAUNCH, true)
@@ -93,6 +109,9 @@ class AppSettings(context: Context) {
         const val KEY_TERMUX_LAUNCH = "termux_launch"
         const val KEY_A11Y_WANTED = "a11y_wanted"
         const val KEY_TERMUX_SCRIPT = "termux_script_path"
+        const val KEY_TTS_VOLUME = "tts_volume_percent"
+        const val KEY_MIN_MEDIA = "min_media_volume_percent"
+        const val KEY_SILENT_TONE = "silent_done_tone"
         val TOKEN_LOCK = Any()
     }
 }

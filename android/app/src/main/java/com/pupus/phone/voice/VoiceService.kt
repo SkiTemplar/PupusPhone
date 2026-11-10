@@ -52,7 +52,9 @@ class VoiceService : Service(), BridgeClient.Listener, SpeechInput.Callback {
         bridge = BridgeClient(this)
         cues = AudioCues(this)
         input = SpeechInput(this, RecognizerProvider(this), cues)
-        output = SpeechOutput(this, ::onSpeechDrained, ::onSpeechFailed)
+        output = SpeechOutput(this, ::onSpeechDrained, ::onSpeechFailed) {
+            VoiceVolumeConfig.ttsVolume(AppSettings(this).ttsVolumePercent)
+        }
         wakeLock = VoiceWakeLock(this)
         input.prepare()
     }
@@ -285,7 +287,7 @@ class VoiceService : Service(), BridgeClient.Listener, SpeechInput.Callback {
             is BridgeMessage.Ready -> VoiceBus.publishStatus(getString(R.string.status_ready, message.model))
             is BridgeMessage.Say -> if (turn.isCurrent(message.id)) onSay(message.id, message.text)
             is BridgeMessage.Status -> if (turn.isCurrent(message.id)) onStatus(message.id, message.text)
-            is BridgeMessage.Done -> if (turn.isCurrent(message.id)) finishWhenSilent()
+            is BridgeMessage.Done -> if (turn.isCurrent(message.id)) finishWhenSilent(message.isSilent)
             is BridgeMessage.Error -> onBridgeError(message)
             is BridgeMessage.Invalid -> Log.w(TAG, "Ignoring invalid frame: ${message.reason}")
         }
@@ -310,7 +312,7 @@ class VoiceService : Service(), BridgeClient.Listener, SpeechInput.Callback {
     }
 
     private fun speak(text: String) {
-        cues.speechStarted()
+        cues.speechStarted(AppSettings(this).minMediaVolumePercent)
         VoiceBus.publish(VoiceState.SPEAKING)
         output.enqueue(text)
     }
@@ -322,13 +324,28 @@ class VoiceService : Service(), BridgeClient.Listener, SpeechInput.Callback {
         speak(text)
     }
 
-    private fun finishWhenSilent() {
+    /**
+     * A silent turn (`done` with `silent`: the order was carried out with nothing to say) takes no
+     * audio focus and says nothing, so the music is not interrupted; at most the end chime.
+     */
+    private fun finishWhenSilent(isSilent: Boolean) {
         turn.markDone()
-        if (!output.isSpeaking()) endTurn()
+        if (output.isSpeaking()) return
+        if (isSilent) {
+            if (AppSettings(this).isSilentDoneToneEnabled) cues.silentDone()
+            VoiceBus.publishStatus(getString(R.string.status_done_silent))
+        }
+        endTurn()
     }
 
+    /** The focus goes back as soon as the speech drains: music recovers while tools keep running. */
     private fun onSpeechDrained() {
-        if (turn.isDone) endTurn() else VoiceBus.publish(VoiceState.THINKING)
+        if (turn.isDone) {
+            endTurn()
+            return
+        }
+        cues.release()
+        VoiceBus.publish(VoiceState.THINKING)
     }
 
     private fun endTurn() {

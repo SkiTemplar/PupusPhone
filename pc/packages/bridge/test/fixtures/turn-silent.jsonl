@@ -1,0 +1,20 @@
+{"type":"system","subtype":"init","cwd":"/workdir","session_id":"SESSION","tools":["mcp__phone__launch_app","mcp__phone__read_screen"],"mcp_servers":[{"name":"phone","status":"connected"}],"model":"claude-sonnet-5-5","permissionMode":"dontAsk","slash_commands":[],"apiKeySource":"none","claude_code_version":"2.1.321","uuid":"u-0"}
+{"type":"system","subtype":"status","status":"requesting","session_id":"SESSION","uuid":"u-1"}
+{"type":"stream_event","event":{"type":"message_start","message":{"model":"claude-sonnet-5-5","id":"msg_1","type":"message","role":"assistant","content":[]}},"session_id":"SESSION","parent_tool_use_id":null,"uuid":"u-2"}
+{"type":"stream_event","event":{"type":"content_block_start","index":0,"content_block":{"type":"text","text":""}},"session_id":"SESSION","parent_tool_use_id":null,"uuid":"u-3"}
+{"type":"stream_event","event":{"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"Vale, abro Spotify"}},"session_id":"SESSION","parent_tool_use_id":null,"uuid":"u-4"}
+{"type":"stream_event","event":{"type":"content_block_stop","index":0},"session_id":"SESSION","parent_tool_use_id":null,"uuid":"u-5"}
+{"type":"assistant","message":{"model":"claude-sonnet-5-5","id":"msg_1","type":"message","role":"assistant","content":[{"type":"text","text":"Vale, abro Spotify"}]},"parent_tool_use_id":null,"session_id":"SESSION","uuid":"u-6"}
+{"type":"stream_event","event":{"type":"content_block_start","index":1,"content_block":{"type":"tool_use","id":"toolu_1","name":"mcp__phone__launch_app","input":{}}},"session_id":"SESSION","parent_tool_use_id":null,"uuid":"u-7"}
+{"type":"stream_event","event":{"type":"content_block_delta","index":1,"delta":{"type":"input_json_delta","partial_json":"{\"name\": \"Spotify\"}"}},"session_id":"SESSION","parent_tool_use_id":null,"uuid":"u-8"}
+{"type":"stream_event","event":{"type":"content_block_stop","index":1},"session_id":"SESSION","parent_tool_use_id":null,"uuid":"u-9"}
+{"type":"assistant","message":{"model":"claude-sonnet-5-5","id":"msg_1","type":"message","role":"assistant","content":[{"type":"tool_use","id":"toolu_1","name":"mcp__phone__launch_app","input":{"name":"Spotify"}}]},"parent_tool_use_id":null,"session_id":"SESSION","uuid":"u-10"}
+{"type":"stream_event","event":{"type":"message_stop"},"session_id":"SESSION","parent_tool_use_id":null,"uuid":"u-11"}
+{"type":"user","message":{"role":"user","content":[{"tool_use_id":"toolu_1","type":"tool_result","content":[{"type":"text","text":"ok: launched com.spotify.music"}]}]},"parent_tool_use_id":null,"session_id":"SESSION","uuid":"u-12"}
+{"type":"stream_event","event":{"type":"message_start","message":{"model":"claude-sonnet-5-5","id":"msg_2","type":"message","role":"assistant","content":[]}},"session_id":"SESSION","parent_tool_use_id":null,"uuid":"u-13"}
+{"type":"stream_event","event":{"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":" [o"}},"session_id":"SESSION","parent_tool_use_id":null,"uuid":"u-15"}
+{"type":"stream_event","event":{"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"k]."}},"session_id":"SESSION","parent_tool_use_id":null,"uuid":"u-16"}
+{"type":"stream_event","event":{"type":"content_block_stop","index":0},"session_id":"SESSION","parent_tool_use_id":null,"uuid":"u-18"}
+{"type":"assistant","message":{"model":"claude-sonnet-5-5","id":"msg_2","type":"message","role":"assistant","content":[{"type":"text","text":" [ok]."}]},"parent_tool_use_id":null,"session_id":"SESSION","uuid":"u-19"}
+{"type":"stream_event","event":{"type":"message_stop"},"session_id":"SESSION","parent_tool_use_id":null,"uuid":"u-20"}
+{"type":"result","subtype":"success","is_error":false,"duration_ms":2100,"duration_api_ms":1900,"num_turns":2,"result":" [ok].","stop_reason":"end_turn","session_id":"SESSION","total_cost_usd":0.001,"uuid":"u-21"}

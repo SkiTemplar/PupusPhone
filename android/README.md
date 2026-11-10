@@ -95,9 +95,26 @@ Interpretaciones del contrato:
 ## Voz y arranque en segundo plano
 
 Flujo: toque → una frase (SpeechRecognizer es-ES) → `utterance` → TTS de cada
-`say` en cola → `done` → en espera. Un toque mientras piensa o habla corta el TTS,
-envía `cancel` y escucha. Un toque mientras escucha cancela la escucha. Los
+`say` en cola → `done` → en espera. Un toque en la app mientras piensa o habla corta
+el TTS, envía `cancel` y escucha. Un toque mientras escucha cancela la escucha. Los
 `error` se leen en voz alta.
+
+- **Audio:** el TTS va con `USAGE_ASSISTANT` + `CONTENT_TYPE_SPEECH` (volumen
+  multimedia, como «Ok Google») y `KEY_PARAM_VOLUME` según «Volumen de la voz»
+  (100 % por defecto). Mientras habla pide `AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK`
+  (la música baja, no se pausa) y lo suelta en cuanto se vacía la cola. Antes de
+  cada frase se deshace el silenciado de los earcons del reconocedor. «Volumen
+  multimedia mínimo al hablar» (desactivado por defecto) sube el volumen
+  multimedia durante el turno y lo restaura después si nadie lo ha tocado.
+- **Respuesta silenciosa:** un `done` con `silent: true` (el modelo respondió
+  `[ok]`) no habla ni pide foco; como mucho suena el tono de fin («Tono al
+  terminar sin respuesta hablada», activado por defecto).
+- **Burbuja flotante:** no recibe toques mientras el turno está en THINKING o
+  SPEAKING ni durante cada gesto de la device API (`FLAG_NOT_TOUCHABLE`), y
+  descarta toques que no vengan de un dedo real (device id ≤ 0 o
+  `FLAG_IS_ACCESSIBILITY_EVENT`). Así los toques que inyecta Claude no la
+  activan; para interrumpir un turno, toca el botón de la app. Con TalkBack
+  activo los toques llegan inyectados por accesibilidad y la burbuja los ignora.
 
 Reconexión al bridge con backoff exponencial (1-30 s) que solo se reinicia al
 recibir `ready`; un cierre 1008 o un 401/403 en el handshake (token del bridge

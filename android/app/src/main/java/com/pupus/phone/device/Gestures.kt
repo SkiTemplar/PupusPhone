@@ -5,6 +5,7 @@ import android.accessibilityservice.GestureDescription
 import android.graphics.Path
 import android.util.Log
 import com.pupus.phone.api.Outcome
+import com.pupus.phone.ui.OverlayTouchGate
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicReference
@@ -27,7 +28,17 @@ class Gestures(private val service: AccessibilityService) {
         return dispatch(path, durationMs)
     }
 
+    /** The push-to-talk bubble steps aside while the gesture runs, so it never receives it. */
     private fun dispatch(path: Path, durationMs: Int): Outcome {
+        OverlayTouchGate.beginGesture()
+        try {
+            return dispatchNow(path, durationMs)
+        } finally {
+            OverlayTouchGate.endGesture()
+        }
+    }
+
+    private fun dispatchNow(path: Path, durationMs: Int): Outcome {
         val gesture = GestureDescription.Builder()
             .addStroke(GestureDescription.StrokeDescription(path, 0, durationMs.toLong()))
             .build()
