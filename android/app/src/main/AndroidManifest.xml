@@ -93,6 +93,12 @@
             </intent-filter>
         </receiver>
 
+        <!-- Periodic accessibility guard: restarts the process after a ROM kill. -->
+        <service
+            android:name=".guard.GuardJobService"
+            android:exported="false"
+            android:permission="android.permission.BIND_JOB_SERVICE" />
+
         <!-- Android Auto (Car App Library). Category IOT: the app controls a device (the phone)
              with templates. Sideloaded only, see android/README.md. -->
         <service
