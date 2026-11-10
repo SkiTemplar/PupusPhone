@@ -62,7 +62,7 @@ export function loadBridgeConfig(env: Env = process.env): BridgeConfig {
   const effort = env['PUPUS_EFFORT'] === '' ? undefined : (env['PUPUS_EFFORT'] ?? 'low');
   if (effort !== undefined && !EFFORTS.includes(effort)) throw new BridgeConfigError(`PUPUS_EFFORT must be one of ${EFFORTS.join('|')}`);
   return {
-    host: env['PUPUS_BRIDGE_HOST'] || '0.0.0.0',
+    host: env['PUPUS_BRIDGE_HOST'] || '127.0.0.1',
     port: int(env, 'PUPUS_BRIDGE_PORT', 8766, 0, 65535),
     token,
     model,
