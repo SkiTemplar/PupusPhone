@@ -1,18 +1,29 @@
 package com.pupus.phone.ui
 
 import android.app.Activity
+import android.content.ClipData
+import android.content.ClipDescription
+import android.content.ClipboardManager
+import android.os.PersistableBundle
+import android.util.Log
 import android.view.View
 import android.widget.Button
 import android.widget.EditText
 import android.widget.Switch
 import android.widget.TextView
+import android.widget.Toast
 import com.pupus.phone.AppSettings
 import com.pupus.phone.R
 import com.pupus.phone.voice.TermuxLauncher
 import com.pupus.phone.voice.TermuxRunCommand
+import com.pupus.phone.voice.TermuxSetupCommand
 import com.pupus.phone.voice.TermuxStatus
+import com.pupus.phone.voice.VoiceService
 
-/** "Arrancar el bridge en Termux": switch, script path and a status line with the permission button. */
+/**
+ * "Arrancar el bridge en Termux": switch, script path, a status line with the permission button
+ * and "Configurar Termux", which copies the install command for the phone-only bridge.
+ */
 class TermuxSettingsPanel(private val activity: Activity, private val settings: AppSettings) {
     private val launcher = TermuxLauncher(activity)
     private val pathInput: EditText = activity.findViewById(R.id.termuxPathInput)
@@ -31,6 +42,36 @@ class TermuxSettingsPanel(private val activity: Activity, private val settings: 
         permissionButton.setOnClickListener {
             activity.requestPermissions(arrayOf(TermuxRunCommand.PERMISSION), TERMUX_PERMISSION_REQUEST)
         }
+        activity.findViewById<Button>(R.id.termuxSetupButton).setOnClickListener { copySetupCommand() }
+    }
+
+    /**
+     * Points the app at the loopback bridge, keeps (or creates and saves) the bridge token and copies
+     * the one-line installer, which writes the same tokens into Termux's ~/.pupusphone.env.
+     */
+    private fun copySetupCommand() {
+        val urlInput = activity.findViewById<EditText>(R.id.bridgeUrlInput)
+        val tokenInput = activity.findViewById<EditText>(R.id.bridgeTokenInput)
+        val bridgeToken = TermuxSetupCommand.ensureBridgeToken(tokenInput.text.toString())
+        val command = try {
+            TermuxSetupCommand.build(settings.deviceToken, bridgeToken)
+        } catch (e: IllegalArgumentException) {
+            Log.e(TAG, "Cannot build the Termux setup command", e)
+            Toast.makeText(activity, R.string.termux_setup_failed, Toast.LENGTH_LONG).show()
+            return
+        }
+        settings.bridgeToken = bridgeToken
+        settings.bridgeUrl = TermuxSetupCommand.LOOPBACK_BRIDGE_URL
+        tokenInput.setText(bridgeToken)
+        urlInput.setText(TermuxSetupCommand.LOOPBACK_BRIDGE_URL)
+        val clip = ClipData.newPlainText("PupusPhone Termux setup", command).apply {
+            // Hides the tokens from the clipboard preview and keyboard suggestions.
+            description.extras = PersistableBundle().apply { putBoolean(ClipDescription.EXTRA_IS_SENSITIVE, true) }
+        }
+        activity.getSystemService(ClipboardManager::class.java).setPrimaryClip(clip)
+        render()
+        VoiceService.current?.connectBridge()
+        Toast.makeText(activity, R.string.termux_setup_copied, Toast.LENGTH_LONG).show()
     }
 
     /** Saved together with the bridge URL by "Guardar". */
@@ -64,5 +105,6 @@ class TermuxSettingsPanel(private val activity: Activity, private val settings: 
 
     companion object {
         const val TERMUX_PERMISSION_REQUEST = 2
+        private const val TAG = "PupusTermux"
     }
 }

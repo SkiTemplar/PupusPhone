@@ -66,6 +66,10 @@
     <string name="invalid_bridge_url">URL del bridge no válida: usa ws://host:puerto/ruta o wss://host/ruta, con un puerto entre 1 y 65535</string>
     <string name="termux_launch">Arrancar el bridge en Termux</string>
     <string name="termux_launch_help">Si la URL del bridge es local (127.0.0.1, localhost o ::1), al activar el modo coche se pide a Termux que ejecute el script. En Termux hay que poner allow-external-apps = true en ~/.termux/termux.properties; si no, Termux rechaza la orden y solo lo avisa con su propia notificación.</string>
+    <string name="termux_setup">Configurar Termux</string>
+    <string name="termux_setup_help">Copia una orden con tus tokens y pone la URL del bridge en ws://127.0.0.1:8766/voice. 1) Abre Termux (de F-Droid o GitHub, no de Google Play), mantén pulsado, Pegar e Intro. 2) Al terminar, escribe claude, inicia sesión y sal con /exit. 3) Vuelve aquí, concede el permiso de Termux y activa el modo coche. La orden se puede repetir para actualizar.</string>
+    <string name="termux_setup_copied">Orden copiada: pégala en Termux</string>
+    <string name="termux_setup_failed">No se pudo preparar la orden: el token del dispositivo no es válido</string>
     <string name="termux_script_path">Script de arranque en Termux</string>
     <string name="termux_grant_permission">Conceder permiso de Termux</string>
     <string name="termux_status_disabled">Arranque automático desactivado</string>

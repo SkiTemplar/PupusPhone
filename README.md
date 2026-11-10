@@ -45,15 +45,20 @@ Two ways to run the bridge:
 ## Setup
 
 1. **App.** Build (`cd android && ./gradlew assembleDebug`) or download the APK from Releases.
-   Install, grant microphone and notifications, enable *PupusPhone* in Accessibility settings, and
-   set battery usage to *Unrestricted*. See [android/README.md](android/README.md).
+   Install it and grant microphone and notifications. On Android 13+ a sideloaded app needs
+   *App info › ⋮ › Allow restricted settings* before its accessibility service can be enabled;
+   then enable *PupusPhone* in Accessibility settings. Set battery usage to *Unrestricted*.
+   See [android/README.md](android/README.md).
 2. **Bridge.**
+   - *Phone only (no PC):* install Termux from F-Droid or GitHub (not Google Play), tap
+     *Ajustes › Conexión › Configurar Termux* in the app and paste the copied command into
+     Termux. When it finishes, run `claude` once to log in. Full guide, including battery
+     settings per brand: [docs/termux.md](docs/termux.md).
    - *PC:* `cd pc && npm install`, fill `.env` from [`.env.example`](pc/.env.example), `npm run bridge`.
      Details in [pc/README.md](pc/README.md).
-   - *Phone only:* clone this repo in Termux and run `bash scripts/termux-setup.sh`, then
-     `claude` once to log in, then `bash scripts/termux-start.sh`. See [docs/termux.md](docs/termux.md).
-3. **Connect.** In the app settings set the bridge URL and token, turn on *Modo coche* and tap the
-   button.
+3. **Connect.** Phone only: *Configurar Termux* already set the URL and token; grant the Termux
+   permission in *Ajustes › Conexión*. PC: set the bridge URL and token in the app. Then turn on
+   *Modo coche* and tap the button.
 
 You can also use the MCP server alone from any Claude Code session on your PC
 (`claude mcp add ...`, see [pc/README.md](pc/README.md)).
