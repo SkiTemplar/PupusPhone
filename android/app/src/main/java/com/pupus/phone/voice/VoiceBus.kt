@@ -18,8 +18,14 @@ object VoiceBus {
         fun onVoiceChanged(state: VoiceState, status: String)
     }
 
+    /** Live dictation text of the current (or last) listening turn. */
+    fun interface TranscriptListener {
+        fun onTranscript(text: String)
+    }
+
     private val main = Handler(Looper.getMainLooper())
     private val listeners = CopyOnWriteArrayList<Listener>()
+    private val transcriptListeners = CopyOnWriteArrayList<TranscriptListener>()
 
     @Volatile
     var state: VoiceState = VoiceState.STOPPED
@@ -27,6 +33,10 @@ object VoiceBus {
 
     @Volatile
     var status: String = ""
+        private set
+
+    @Volatile
+    var transcript: String = ""
         private set
 
     fun addListener(listener: Listener) {
@@ -45,6 +55,20 @@ object VoiceBus {
     }
 
     fun publishStatus(newStatus: String) = publish(state, newStatus)
+
+    fun addTranscriptListener(listener: TranscriptListener) {
+        transcriptListeners.add(listener)
+        listener.onTranscript(transcript)
+    }
+
+    fun removeTranscriptListener(listener: TranscriptListener) {
+        transcriptListeners.remove(listener)
+    }
+
+    fun publishTranscript(text: String) {
+        transcript = text
+        main.post { transcriptListeners.forEach { it.onTranscript(transcript) } }
+    }
 }
 
 /** Entry points used by the UI and the overlay to drive [VoiceService]. */

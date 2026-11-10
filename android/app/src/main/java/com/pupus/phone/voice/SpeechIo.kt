@@ -1,75 +1,15 @@
 package com.pupus.phone.voice
 
 import android.content.Context
-import android.content.Intent
 import android.media.AudioAttributes
-import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
-import android.speech.RecognitionListener
-import android.speech.RecognizerIntent
-import android.speech.SpeechRecognizer
 import android.speech.tts.TextToSpeech
 import android.speech.tts.UtteranceProgressListener
 import android.util.Log
 import java.util.Locale
 
-private const val LANGUAGE_TAG = "es-ES"
-
-/** One-utterance SpeechRecognizer wrapper. Must be used on the main thread. */
-class SpeechInput(private val context: Context) {
-    interface Callback {
-        fun onUtterance(text: String)
-        fun onSpeechError(code: Int)
-    }
-
-    private var recognizer: SpeechRecognizer? = null
-
-    fun isAvailable(): Boolean = SpeechRecognizer.isRecognitionAvailable(context)
-
-    fun listen(callback: Callback) {
-        val sr = recognizer ?: SpeechRecognizer.createSpeechRecognizer(context).also { recognizer = it }
-        sr.cancel()
-        sr.setRecognitionListener(Listener(callback))
-        val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
-            .putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-            .putExtra(RecognizerIntent.EXTRA_LANGUAGE, LANGUAGE_TAG)
-            .putExtra(RecognizerIntent.EXTRA_LANGUAGE_PREFERENCE, LANGUAGE_TAG)
-            .putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, false)
-            .putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1)
-        sr.startListening(intent)
-    }
-
-    fun cancel() {
-        recognizer?.cancel()
-    }
-
-    fun destroy() {
-        recognizer?.destroy()
-        recognizer = null
-    }
-
-    private class Listener(private val callback: Callback) : RecognitionListener {
-        override fun onResults(results: Bundle?) {
-            val text = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull()
-            if (text.isNullOrBlank()) callback.onSpeechError(SpeechRecognizer.ERROR_NO_MATCH)
-            else callback.onUtterance(text)
-        }
-
-        override fun onError(error: Int) {
-            Log.w("PupusStt", "Recognizer error $error")
-            callback.onSpeechError(error)
-        }
-
-        override fun onReadyForSpeech(params: Bundle?) = Unit
-        override fun onBeginningOfSpeech() = Unit
-        override fun onRmsChanged(rmsdB: Float) = Unit
-        override fun onBufferReceived(buffer: ByteArray?) = Unit
-        override fun onEndOfSpeech() = Unit
-        override fun onPartialResults(partialResults: Bundle?) = Unit
-        override fun onEvent(eventType: Int, params: Bundle?) = Unit
-    }
-}
+internal const val LANGUAGE_TAG = "es-ES"
 
 /**
  * Queued es-ES TextToSpeech. [onDrained] runs on the main thread when the current

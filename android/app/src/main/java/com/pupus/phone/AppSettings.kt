@@ -4,6 +4,8 @@ import android.content.Context
 import android.util.Log
 import com.pupus.phone.api.DeviceToken
 import com.pupus.phone.api.InterfaceAddress
+import com.pupus.phone.voice.DictationConfig
+import com.pupus.phone.voice.RecognizerMode
 import java.net.Inet4Address
 import java.net.NetworkInterface
 import java.net.SocketException
@@ -37,6 +39,15 @@ class AppSettings(context: Context) {
         get() = prefs.getBoolean(KEY_ALLOW_LAN, false)
         set(value) = prefs.edit().putBoolean(KEY_ALLOW_LAN, value).apply()
 
+    /** "Pausa para enviar": silence after which a dictation turn is sent. */
+    var pauseToSendMs: Long
+        get() = DictationConfig.clampSilence(prefs.getLong(KEY_PAUSE_MS, DictationConfig.DEFAULT_SILENCE_MS))
+        set(value) = prefs.edit().putLong(KEY_PAUSE_MS, DictationConfig.clampSilence(value)).apply()
+
+    var recognizerMode: RecognizerMode
+        get() = RecognizerMode.parse(prefs.getString(KEY_RECOGNIZER, null))
+        set(value) = prefs.edit().putString(KEY_RECOGNIZER, value.name).apply()
+
     private companion object {
         const val TAG = "PupusSettings"
         const val PREFS = "pupus"
@@ -44,6 +55,8 @@ class AppSettings(context: Context) {
         const val KEY_BRIDGE_URL = "bridge_url"
         const val KEY_BRIDGE_TOKEN = "bridge_token"
         const val KEY_ALLOW_LAN = "allow_lan"
+        const val KEY_PAUSE_MS = "pause_to_send_ms"
+        const val KEY_RECOGNIZER = "recognizer_mode"
         val TOKEN_LOCK = Any()
     }
 }

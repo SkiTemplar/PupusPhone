@@ -34,9 +34,11 @@ class MainActivity : Activity() {
     private lateinit var settings: AppSettings
     private lateinit var stateText: TextView
     private lateinit var statusText: TextView
+    private lateinit var transcriptText: TextView
     private lateinit var carMode: Switch
     private val pttBackground = GradientDrawable().apply { shape = GradientDrawable.OVAL }
     private val voiceListener = VoiceBus.Listener { state, status -> render(state, status) }
+    private val transcriptListener = VoiceBus.TranscriptListener { text -> renderTranscript(text) }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -44,6 +46,7 @@ class MainActivity : Activity() {
         settings = AppSettings(this)
         stateText = findViewById(R.id.stateText)
         statusText = findViewById(R.id.statusText)
+        transcriptText = findViewById(R.id.transcriptText)
         carMode = findViewById(R.id.carModeSwitch)
         bindVoiceControls()
         bindSettings()
@@ -53,11 +56,13 @@ class MainActivity : Activity() {
     override fun onResume() {
         super.onResume()
         VoiceBus.addListener(voiceListener)
+        VoiceBus.addTranscriptListener(transcriptListener)
         refreshSettingsInfo()
     }
 
     override fun onPause() {
         VoiceBus.removeListener(voiceListener)
+        VoiceBus.removeTranscriptListener(transcriptListener)
         super.onPause()
     }
 
@@ -87,6 +92,12 @@ class MainActivity : Activity() {
         else window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
     }
 
+    /** Live dictation: shows what the recognizer has understood so far. */
+    private fun renderTranscript(text: String) {
+        transcriptText.text = text
+        transcriptText.visibility = if (text.isEmpty()) View.GONE else View.VISIBLE
+    }
+
     private fun bindSettings() {
         val urlInput = findViewById<EditText>(R.id.bridgeUrlInput).apply { setText(settings.bridgeUrl) }
         val tokenInput = findViewById<EditText>(R.id.bridgeTokenInput).apply { setText(settings.bridgeToken) }
@@ -95,6 +106,7 @@ class MainActivity : Activity() {
         }
         findViewById<Button>(R.id.copyTokenButton).setOnClickListener { copyDeviceToken() }
         bindLanSwitch()
+        VoiceSettingsPanel(this, settings).bind()
         findViewById<Button>(R.id.permissionsButton).setOnClickListener { requestMissingPermissions() }
         findViewById<Button>(R.id.accessibilityButton).setOnClickListener {
             openSettings(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))

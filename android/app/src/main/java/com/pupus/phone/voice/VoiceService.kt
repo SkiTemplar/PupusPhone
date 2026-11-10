@@ -19,12 +19,14 @@ import java.util.UUID
 
 /**
  * Foreground (microphone) service that owns the voice turn:
- * tap -> listen one utterance -> `utterance` -> speak `say` frames -> `done`.
+ * tap -> dictate (until a second tap or the configured pause) -> `utterance` ->
+ * speak `say` frames -> `done`.
  */
 class VoiceService : Service(), BridgeClient.Listener, SpeechInput.Callback {
     private lateinit var bridge: BridgeClient
     private lateinit var input: SpeechInput
     private lateinit var output: SpeechOutput
+    private lateinit var cues: AudioCues
     private var wakeLock: PowerManager.WakeLock? = null
     private var isForeground = false
     private var currentId: String? = null
@@ -35,8 +37,10 @@ class VoiceService : Service(), BridgeClient.Listener, SpeechInput.Callback {
     override fun onCreate() {
         super.onCreate()
         bridge = BridgeClient(this)
-        input = SpeechInput(this)
+        cues = AudioCues(this)
+        input = SpeechInput(this, RecognizerProvider(this), cues)
         output = SpeechOutput(this, ::onSpeechDrained, ::onSpeechFailed)
+        input.prepare()
     }
 
     /**
@@ -79,12 +83,14 @@ class VoiceService : Service(), BridgeClient.Listener, SpeechInput.Callback {
         bridge.shutdown()
         input.destroy()
         output.shutdown()
+        cues.shutdown()
         releaseWakeLock()
         VoiceBus.publish(VoiceState.STOPPED, getString(R.string.state_stopped))
         super.onDestroy()
     }
 
     fun stopVoice() {
+        input.cancel()
         releaseWakeLock()
         stopForeground(STOP_FOREGROUND_REMOVE)
         stopSelf()
@@ -105,11 +111,10 @@ class VoiceService : Service(), BridgeClient.Listener, SpeechInput.Callback {
         if (!bridge.send(VoiceMessages.reset())) speakLocal(getString(R.string.error_no_bridge))
     }
 
-    /** Push-to-talk. While listening, a tap cancels; while thinking/speaking, it interrupts. */
+    /** Tap to dictate. While listening, a tap sends now; while thinking/speaking, it interrupts. */
     fun onTap() {
-        if (VoiceBus.state == VoiceState.LISTENING) {
-            input.cancel()
-            VoiceBus.publish(VoiceState.IDLE)
+        if (input.isActive) {
+            input.sendNow()
             return
         }
         abortTurn()
@@ -117,12 +122,15 @@ class VoiceService : Service(), BridgeClient.Listener, SpeechInput.Callback {
             speakLocal(getString(R.string.error_stt_unavailable))
             return
         }
-        VoiceBus.publish(VoiceState.LISTENING)
-        input.listen(this)
+        val settings = AppSettings(this)
+        VoiceBus.publishTranscript("")
+        VoiceBus.publish(VoiceState.LISTENING, getString(R.string.status_dictating))
+        input.start(this, DictationConfig(silenceMs = settings.pauseToSendMs), settings.recognizerMode)
     }
 
     private fun abortTurn() {
         output.stop()
+        cues.release()
         val id = currentId ?: return
         currentId = null
         isTurnDone = true
@@ -140,14 +148,17 @@ class VoiceService : Service(), BridgeClient.Listener, SpeechInput.Callback {
         VoiceBus.publish(VoiceState.THINKING, "«$text»")
     }
 
+    override fun onTranscript(text: String) = VoiceBus.publishTranscript(text)
+
+    /** Nothing was said: end the turn quietly. */
+    override fun onNothingHeard() {
+        VoiceBus.publish(VoiceState.IDLE, getString(R.string.status_nothing_heard))
+    }
+
     override fun onSpeechError(code: Int) {
         val message = when (code) {
-            SpeechRecognizer.ERROR_NO_MATCH, SpeechRecognizer.ERROR_SPEECH_TIMEOUT -> getString(R.string.error_stt_nomatch)
+            SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS -> getString(R.string.mic_permission_missing)
             else -> getString(R.string.error_stt_generic, code)
-        }
-        if (code == SpeechRecognizer.ERROR_CLIENT) {
-            VoiceBus.publish(VoiceState.IDLE)
-            return
         }
         speakLocal(message)
     }
@@ -192,6 +203,7 @@ class VoiceService : Service(), BridgeClient.Listener, SpeechInput.Callback {
     }
 
     private fun speak(text: String) {
+        cues.speechStarted()
         VoiceBus.publish(VoiceState.SPEAKING)
         output.enqueue(text)
     }
@@ -215,7 +227,9 @@ class VoiceService : Service(), BridgeClient.Listener, SpeechInput.Callback {
 
     private fun endTurn() {
         currentId = null
-        if (VoiceBus.state != VoiceState.LISTENING) VoiceBus.publish(VoiceState.IDLE)
+        if (input.isActive) return
+        cues.release()
+        VoiceBus.publish(VoiceState.IDLE)
     }
 
     /** CPU only: the screen is kept on by FLAG_KEEP_SCREEN_ON on the activity and the overlay. */

@@ -5,7 +5,7 @@ import { call, connect, idOf, textOf, TOKEN, type Connected } from './helpers.ts
 
 const EXPECTED_TOOLS = [
   'launch_app', 'list_apps', 'long_press', 'media', 'open_url', 'press', 'read_screen',
-  'screenshot', 'scroll', 'swipe', 'tap', 'type_text', 'wait',
+  'screenshot', 'scroll', 'scroll_to_text', 'swipe', 'tap', 'tap_text', 'type_text', 'wait', 'wait_for_text',
 ];
 
 let fake: RunningFakePhone;

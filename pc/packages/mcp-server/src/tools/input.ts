@@ -4,7 +4,8 @@ import { center } from '../render.ts';
 import { act, coord, describeNode, failure, findNode, guarded, nodeId, observeParam, type ToolContext } from './context.ts';
 
 const TAP = `Tap the screen. Prefer node_id (from the latest screen read: clicks the node or its first clickable
-ancestor, robust to layout shifts); use x,y only for elements without a node. Returns the updated screen.`;
+ancestor, robust to layout shifts); use x,y only for elements without a node. Prefer tap_text when you know the
+label: it finds and taps in one call. Returns the updated screen.`;
 
 const LONG_PRESS = 'Long-press a point (x,y) or the centre of a node (node_id). Returns the updated screen.';
 

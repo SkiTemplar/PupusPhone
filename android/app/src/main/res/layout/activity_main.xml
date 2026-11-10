@@ -25,6 +25,19 @@
         android:textColor="#FFB0BEC5"
         android:textSize="18sp" />
 
+    <TextView
+        android:id="@+id/transcriptText"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:maxLines="6"
+        android:ellipsize="start"
+        android:paddingTop="8dp"
+        android:paddingBottom="8dp"
+        android:textColor="#FFFFFFFF"
+        android:textSize="26sp"
+        android:visibility="gone" />
+
     <FrameLayout
         android:layout_width="match_parent"
         android:layout_height="0dp"
@@ -83,6 +96,24 @@
             <Button android:id="@+id/accessibilityButton" style="@style/SettingsButton" android:text="@string/open_accessibility" />
             <Button android:id="@+id/batteryButton" style="@style/SettingsButton" android:text="@string/open_battery" />
             <Button android:id="@+id/resetButton" style="@style/SettingsButton" android:text="@string/new_conversation" />
+
+            <TextView android:id="@+id/pauseLabel" style="@style/SettingsText" />
+            <SeekBar
+                android:id="@+id/pauseSeek"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:contentDescription="@string/pause_to_send_help" />
+            <TextView style="@style/SettingsText" android:text="@string/pause_to_send_help" />
+
+            <TextView style="@style/SettingsText" android:text="@string/recognizer_title" />
+            <RadioGroup
+                android:id="@+id/recognizerGroup"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content">
+                <RadioButton android:id="@+id/recognizerAuto" style="@style/SettingsText" android:text="@string/recognizer_auto" />
+                <RadioButton android:id="@+id/recognizerOnDevice" style="@style/SettingsText" android:text="@string/recognizer_on_device" />
+                <RadioButton android:id="@+id/recognizerDefault" style="@style/SettingsText" android:text="@string/recognizer_default" />
+            </RadioGroup>
 
             <TextView style="@style/SettingsText" android:text="@string/bridge_url" />
             <EditText
