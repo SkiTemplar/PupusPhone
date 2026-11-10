@@ -1,0 +1,6 @@
+# Token de prueba de RouteHandlerTest ("0123456789abcdef" x4), no es un secreto.
+74611b8fd3db069ed28c017a3213e7d49fa47898:android/app/src/test/java/com/pupus/phone/api/RouteHandlerTest.kt:generic-api-key:33
+2b7d3a57cfdffa128633edcb455eaea62810d680:android/app/src/test/java/com/pupus/phone/api/RouteHandlerTest.kt:generic-api-key:33
+2d09238e3021031f02af595e2e136adc8aa860f0:android/app/src/test/java/com/pupus/phone/api/RouteHandlerTest.kt:generic-api-key:33
+abd7fd012f0a1ae1fed0810183667f9ac5fc82ce:android/app/src/test/java/com/pupus/phone/api/RouteHandlerTest.kt:generic-api-key:33
+081ee8c1098041b76870369b03b36a133c1803ff:android/app/src/test/java/com/pupus/phone/api/RouteHandlerTest.kt:generic-api-key:33
