@@ -23,7 +23,13 @@ previous, volume_up, volume_down. Works on whichever app is playing; always pref
 
 const MEDIA_ACTIONS = ['play_pause', 'play', 'pause', 'next', 'previous', 'volume_up', 'volume_down'] as const;
 const PACKAGE_RE = /^[A-Za-z][\w]*(\.[A-Za-z][\w]*)+$/;
-const URI_RE = /^[a-z][a-z0-9+.-]*:\S+$/i;
+const URI_RE = /^[a-z][a-z0-9+.-]*:\S.*$/i;
+
+/** Percent-encodes characters Claude often leaves raw in deep links (spotify:search:Don't Stop Me Now). */
+export function normalizeUri(url: string): string {
+  return url.trim().replace(/\s+/g, '%20').replace(/'/g, '%27');
+}
+
 const APPS_TTL_MS = 60_000;
 
 function normalize(value: string): string {
@@ -108,7 +114,8 @@ export function registerAppTools(server: McpServer, ctx: ToolContext): void {
         observe: observeParam,
       },
     },
-    guarded('open_url', async ({ url, package: pkg, action, extras, observe }) => {
+    guarded('open_url', async ({ url: rawUrl, package: pkg, action, extras, observe }) => {
+      const url = normalizeUri(rawUrl);
       if (/^(javascript|file|content):/i.test(url)) return failure('This URI scheme is not allowed.');
       const body = { data: url, package: pkg, action, extras };
       return act(ctx, `opened ${url}`, () => ctx.client.post('/intent', body), observe);
