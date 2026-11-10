@@ -11,7 +11,6 @@ import com.pupus.phone.PhoneAccessibilityService
 import com.pupus.phone.R
 import com.pupus.phone.voice.VoiceBus
 import com.pupus.phone.voice.VoiceLauncher
-import com.pupus.phone.voice.VoiceService
 import com.pupus.phone.voice.VoiceState
 
 /** Driving screen: one big push-to-talk circle, the state word and the conversation text. */
@@ -27,6 +26,7 @@ class MainActivity : Activity() {
     private var state = VoiceState.STOPPED
     private var isBridgeConnected = false
     private var transcript = ""
+    private val carModeSwitch = CarModeSwitch()
 
     private val voiceListener = VoiceBus.Listener { newState, status ->
         state = newState
@@ -63,6 +63,8 @@ class MainActivity : Activity() {
         a11yChip = findViewById(R.id.a11yChip)
         bridgeChip = findViewById(R.id.bridgeChip)
         carMode = findViewById(R.id.carModeSwitch)
+        // The source of truth is whether the service runs, not the state saved before process death.
+        carMode.isSaveEnabled = false
         bindControls()
         requestVoicePermissions()
     }
@@ -92,9 +94,12 @@ class MainActivity : Activity() {
         circle.setOnClickListener { VoiceLauncher.tap(this) }
         findViewById<View>(R.id.carModeCard).setOnClickListener { carMode.toggle() }
         carMode.setOnCheckedChangeListener { _, isChecked ->
-            val isRunning = VoiceService.current != null
-            if (isChecked && !isRunning) VoiceLauncher.start(this)
-            if (!isChecked && isRunning) VoiceLauncher.stop(this)
+            val isRunning = VoiceBus.state != VoiceState.STOPPED
+            when (carModeSwitch.onCheckedChanged(isChecked, isRunning)) {
+                CarModeAction.START -> VoiceLauncher.start(this)
+                CarModeAction.STOP -> VoiceLauncher.stop(this)
+                CarModeAction.NONE -> Unit
+            }
         }
         findViewById<View>(R.id.settingsButton).setOnClickListener {
             startActivity(Intent(this, SettingsActivity::class.java))
@@ -110,7 +115,7 @@ class MainActivity : Activity() {
         renderBridgeChip()
         renderTranscript()
         val isActive = state != VoiceState.STOPPED
-        if (carMode.isChecked != isActive) carMode.isChecked = isActive
+        carModeSwitch.rendering { if (carMode.isChecked != isActive) carMode.isChecked = isActive }
         if (isActive) window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         else window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
     }

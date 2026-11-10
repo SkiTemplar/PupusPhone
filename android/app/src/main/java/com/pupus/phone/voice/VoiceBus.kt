@@ -7,6 +7,7 @@ import android.content.pm.PackageManager
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
+import android.widget.Toast
 import com.pupus.phone.R
 import java.util.concurrent.CopyOnWriteArrayList
 
@@ -146,9 +147,16 @@ object VoiceLauncher {
         VoiceService.current?.stopVoice() ?: Log.i(TAG, "stop: service not running")
     }
 
+    /** New conversation. Without car mode there is no bridge connection, so it is not started. */
     fun reset(context: Context) {
         val running = VoiceService.current
-        if (running != null) running.resetConversation() else send(context, VoiceService.ACTION_RESET)
+        if (running != null) {
+            running.resetConversation()
+            return
+        }
+        val message = context.getString(R.string.reset_needs_car_mode)
+        VoiceBus.publishStatus(message)
+        Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
     }
 
     private fun send(context: Context, action: String) {

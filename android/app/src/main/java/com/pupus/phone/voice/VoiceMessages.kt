@@ -1,5 +1,6 @@
 package com.pupus.phone.voice
 
+import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import org.json.JSONException
 import org.json.JSONObject
 import java.net.URLEncoder
@@ -67,9 +68,23 @@ object VoiceMessages {
 
 /** Builds `ws://host:8766/voice?token=<token>` from the configured base URL. */
 object VoiceUrl {
+    private const val WS = "ws://"
+    private const val WSS = "wss://"
+
+    /**
+     * ws:// or wss:// with a host and, if present, a numeric port in 1..65535.
+     * Parsed by OkHttp (after mapping to http/https) so it accepts exactly what
+     * [BridgeClient] can open.
+     */
     fun isValidBase(base: String): Boolean {
-        val trimmed = base.trim()
-        return (trimmed.startsWith("ws://") || trimmed.startsWith("wss://")) && trimmed.length > "wss://".length
+        val httpUrl = toHttp(base.trim()) ?: return false
+        return httpUrl.toHttpUrlOrNull()?.host?.isNotEmpty() == true
+    }
+
+    private fun toHttp(url: String): String? = when {
+        url.startsWith(WS, ignoreCase = true) -> "http://" + url.substring(WS.length)
+        url.startsWith(WSS, ignoreCase = true) -> "https://" + url.substring(WSS.length)
+        else -> null
     }
 
     fun build(base: String, token: String): String? {

@@ -8,7 +8,6 @@ import android.app.Service
 import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.os.IBinder
-import android.os.PowerManager
 import android.speech.SpeechRecognizer
 import android.util.Log
 import com.pupus.phone.AppSettings
@@ -27,11 +26,11 @@ class VoiceService : Service(), BridgeClient.Listener, SpeechInput.Callback {
     private lateinit var input: SpeechInput
     private lateinit var output: SpeechOutput
     private lateinit var cues: AudioCues
-    private var wakeLock: PowerManager.WakeLock? = null
+    private lateinit var wakeLock: VoiceWakeLock
+    private val turn = TurnTracker()
+    private val pending = PendingRequests()
     private var isForeground = false
-    private var currentId: String? = null
-    private var isTurnDone = true
-    private var replyId: String? = null
+    private var isBridgeConfigured = false
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -41,6 +40,7 @@ class VoiceService : Service(), BridgeClient.Listener, SpeechInput.Callback {
         cues = AudioCues(this)
         input = SpeechInput(this, RecognizerProvider(this), cues)
         output = SpeechOutput(this, ::onSpeechDrained, ::onSpeechFailed)
+        wakeLock = VoiceWakeLock(this)
         input.prepare()
     }
 
@@ -51,11 +51,7 @@ class VoiceService : Service(), BridgeClient.Listener, SpeechInput.Callback {
      */
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         if (!enterForeground()) return START_NOT_STICKY
-        when (intent?.action) {
-            ACTION_TAP -> onTap()
-            ACTION_RESET -> resetConversation()
-            else -> Unit
-        }
+        if (intent?.action == ACTION_TAP) onStartTap()
         return START_NOT_STICKY
     }
 
@@ -73,44 +69,87 @@ class VoiceService : Service(), BridgeClient.Listener, SpeechInput.Callback {
         if (isForeground) return true
         isForeground = true
         current = this
-        acquireWakeLock()
+        wakeLock.acquire()
         connectBridge()
         VoiceBus.publish(VoiceState.IDLE)
         return true
     }
 
+    /** The service was started by a tap: wait for the first connection instead of failing at once. */
+    private fun onStartTap() {
+        if (bridge.isConnected() || !isBridgeConfigured) {
+            onTap()
+            return
+        }
+        pending.queueTap()
+        VoiceBus.publishStatus(getString(R.string.status_connecting))
+    }
+
     override fun onDestroy() {
-        current = null
+        if (current === this) current = null
         bridge.shutdown()
         input.destroy()
         output.shutdown()
         cues.shutdown()
-        releaseWakeLock()
-        VoiceBus.publishBridge(false)
-        VoiceBus.publish(VoiceState.STOPPED, getString(R.string.state_stopped))
+        wakeLock.release()
+        // A newer instance may already be running after a quick off/on: do not clobber its state.
+        if (current == null) {
+            VoiceBus.publishBridge(false)
+            VoiceBus.publish(VoiceState.STOPPED, getString(R.string.state_stopped))
+        }
         super.onDestroy()
     }
 
+    /** Car mode off. Publishes STOPPED now so an immediate off/on starts the service again. */
     fun stopVoice() {
+        if (current === this) current = null
+        isForeground = false
+        pending.clear()
         input.cancel()
-        releaseWakeLock()
+        abortTurn()
+        bridge.close()
+        wakeLock.release()
+        VoiceBus.publishBridge(false)
+        VoiceBus.publish(VoiceState.STOPPED, getString(R.string.state_stopped))
         stopForeground(STOP_FOREGROUND_REMOVE)
         stopSelf()
     }
 
-    fun connectBridge() {
+    /** (Re)opens the bridge with the saved settings; returns false if they are incomplete. */
+    fun connectBridge(): Boolean {
         val settings = AppSettings(this)
         val url = VoiceUrl.build(settings.bridgeUrl, settings.bridgeToken)
+        isBridgeConfigured = url != null
+        // The old socket is closed silently: a running turn would never receive `done`.
+        if (turn.hasTurn) {
+            abortTurn()
+            VoiceBus.publish(VoiceState.IDLE)
+        }
+        VoiceBus.publishBridge(false)
         if (url == null) {
+            bridge.close()
             VoiceBus.publishStatus(getString(R.string.error_bridge_not_configured))
-            return
+            return false
         }
         bridge.connect(url)
+        return true
     }
 
+    /** New conversation: silences everything now; the bridge gets `reset` now or on reconnect. */
     fun resetConversation() {
-        abortTurn()
-        if (!bridge.send(VoiceMessages.reset())) speakLocal(getString(R.string.error_no_bridge))
+        input.cancel()
+        abortTurn(isNewConversation = true)
+        VoiceBus.publishTranscript("")
+        VoiceBus.publishReply("")
+        if (pending.requestReset(bridge.isConnected())) sendReset()
+        val status = if (pending.isResetPending) R.string.status_reset_pending else R.string.status_new_conversation
+        VoiceBus.publish(VoiceState.IDLE, getString(status))
+    }
+
+    private fun sendReset() {
+        if (bridge.send(VoiceMessages.reset())) return
+        Log.w(TAG, "reset not sent; queued for the next connection")
+        pending.deferReset()
     }
 
     /** Tap to dictate. While listening, a tap sends now; while thinking/speaking, it interrupts. */
@@ -120,6 +159,10 @@ class VoiceService : Service(), BridgeClient.Listener, SpeechInput.Callback {
             return
         }
         abortTurn()
+        if (!bridge.isConnected()) {
+            reportNoConnection()
+            return
+        }
         if (!input.isAvailable()) {
             speakLocal(getString(R.string.error_stt_unavailable))
             return
@@ -130,12 +173,17 @@ class VoiceService : Service(), BridgeClient.Listener, SpeechInput.Callback {
         input.start(this, DictationConfig(silenceMs = settings.pauseToSendMs), settings.recognizerMode)
     }
 
-    private fun abortTurn() {
+    /** Refuses to listen: dictating a whole sentence that cannot be sent is worse. */
+    private fun reportNoConnection() {
+        cues.listeningEnded()
+        val message = if (isBridgeConfigured) R.string.error_no_assistant else R.string.error_bridge_not_configured
+        speakLocal(getString(message))
+    }
+
+    private fun abortTurn(isNewConversation: Boolean = false) {
         output.stop()
         cues.release()
-        val id = currentId ?: return
-        currentId = null
-        isTurnDone = true
+        val id = (if (isNewConversation) turn.resetConversation() else turn.abort()) ?: return
         if (!bridge.send(VoiceMessages.cancel(id))) Log.w(TAG, "cancel not sent for $id")
     }
 
@@ -145,8 +193,7 @@ class VoiceService : Service(), BridgeClient.Listener, SpeechInput.Callback {
             speakLocal(getString(R.string.error_no_bridge))
             return
         }
-        currentId = id
-        isTurnDone = false
+        turn.begin(id)
         VoiceBus.publish(VoiceState.THINKING, "«$text»")
     }
 
@@ -169,12 +216,16 @@ class VoiceService : Service(), BridgeClient.Listener, SpeechInput.Callback {
         VoiceBus.publishBridge(true)
         VoiceBus.publishStatus(getString(R.string.status_connected))
         if (!bridge.send(VoiceMessages.hello(BuildConfig.VERSION_NAME))) Log.w(TAG, "hello not sent")
+        val actions = pending.onConnected()
+        if (actions.shouldReset) sendReset()
+        if (actions.shouldTap) onTap()
     }
 
     override fun onRejected() {
         VoiceBus.publishBridge(false)
         val message = getString(R.string.error_bridge_bad_token)
-        if (currentId != null) speakLocal(message) else VoiceBus.publishStatus(message)
+        val hadTap = pending.onConnectFailed()
+        if (turn.hasTurn || hadTap) speakLocal(message) else VoiceBus.publishStatus(message)
     }
 
     private fun onSpeechFailed() {
@@ -184,19 +235,17 @@ class VoiceService : Service(), BridgeClient.Listener, SpeechInput.Callback {
     override fun onDisconnected(retryInSeconds: Int, reason: String) {
         Log.w(TAG, "Bridge disconnected: $reason")
         VoiceBus.publishBridge(false)
-        if (currentId != null) {
-            currentId = null
-            speakLocal(getString(R.string.error_no_bridge))
-        }
+        if (turn.hasTurn) speakLocal(getString(R.string.error_no_bridge))
+        if (pending.onConnectFailed()) reportNoConnection()
         if (retryInSeconds >= 0) VoiceBus.publishStatus(getString(R.string.status_disconnected, retryInSeconds))
     }
 
     override fun onMessage(message: BridgeMessage) {
         when (message) {
             is BridgeMessage.Ready -> VoiceBus.publishStatus(getString(R.string.status_ready, message.model))
-            is BridgeMessage.Say -> if (message.id == currentId) onSay(message.id, message.text)
-            is BridgeMessage.Status -> if (message.id == currentId) VoiceBus.publishStatus(message.text)
-            is BridgeMessage.Done -> if (message.id == currentId) finishWhenSilent()
+            is BridgeMessage.Say -> if (turn.isCurrent(message.id)) onSay(message.id, message.text)
+            is BridgeMessage.Status -> if (turn.isCurrent(message.id)) VoiceBus.publishStatus(message.text)
+            is BridgeMessage.Done -> if (turn.isCurrent(message.id)) finishWhenSilent()
             is BridgeMessage.Error -> onBridgeError(message)
             is BridgeMessage.Invalid -> Log.w(TAG, "Ignoring invalid frame: ${message.reason}")
         }
@@ -204,14 +253,12 @@ class VoiceService : Service(), BridgeClient.Listener, SpeechInput.Callback {
 
     /** Speaks a `say` frame and shows the whole reply of the turn on screen. */
     private fun onSay(id: String, text: String) {
-        val shown = if (id == replyId) "${VoiceBus.reply} $text".trim() else text
-        replyId = id
-        VoiceBus.publishReply(shown)
+        VoiceBus.publishReply(turn.appendReply(id, text, VoiceBus.reply))
         speak(text)
     }
 
     private fun onBridgeError(message: BridgeMessage.Error) {
-        if (message.id != null && message.id != currentId) return
+        if (message.id != null && !turn.isCurrent(message.id)) return
         speakLocal(message.message)
     }
 
@@ -221,40 +268,27 @@ class VoiceService : Service(), BridgeClient.Listener, SpeechInput.Callback {
         output.enqueue(text)
     }
 
-    /** Speaks a local message and ends the turn once it is spoken. */
+    /** Speaks a local message and ends the turn once it is spoken (the bridge needs no cancel). */
     private fun speakLocal(text: String) {
         VoiceBus.publishStatus(text)
-        isTurnDone = true
-        currentId = null
+        turn.abort()
         speak(text)
     }
 
     private fun finishWhenSilent() {
-        isTurnDone = true
+        turn.markDone()
         if (!output.isSpeaking()) endTurn()
     }
 
     private fun onSpeechDrained() {
-        if (isTurnDone) endTurn() else VoiceBus.publish(VoiceState.THINKING)
+        if (turn.isDone) endTurn() else VoiceBus.publish(VoiceState.THINKING)
     }
 
     private fun endTurn() {
-        currentId = null
+        turn.abort()
         if (input.isActive) return
         cues.release()
         VoiceBus.publish(VoiceState.IDLE)
-    }
-
-    /** CPU only: the screen is kept on by FLAG_KEEP_SCREEN_ON on the activity and the overlay. */
-    private fun acquireWakeLock() {
-        if (wakeLock?.isHeld == true) return
-        val pm = getSystemService(PowerManager::class.java)
-        wakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "PupusPhone:voice").also { it.acquire(WAKE_LOCK_MS) }
-    }
-
-    private fun releaseWakeLock() {
-        wakeLock?.takeIf { it.isHeld }?.release()
-        wakeLock = null
     }
 
     private fun buildNotification(): Notification {
@@ -276,11 +310,9 @@ class VoiceService : Service(), BridgeClient.Listener, SpeechInput.Callback {
     companion object {
         const val ACTION_START = "com.pupus.phone.voice.START"
         const val ACTION_TAP = "com.pupus.phone.voice.TAP"
-        const val ACTION_RESET = "com.pupus.phone.voice.RESET"
         private const val TAG = "PupusVoice"
         private const val CHANNEL_ID = "voice"
         private const val NOTIFICATION_ID = 1
-        private const val WAKE_LOCK_MS = 4L * 60 * 60 * 1000
 
         @Volatile
         var current: VoiceService? = null
