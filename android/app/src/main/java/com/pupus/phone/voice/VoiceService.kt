@@ -31,6 +31,7 @@ class VoiceService : Service(), BridgeClient.Listener, SpeechInput.Callback {
     private var isForeground = false
     private var currentId: String? = null
     private var isTurnDone = true
+    private var replyId: String? = null
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -85,6 +86,7 @@ class VoiceService : Service(), BridgeClient.Listener, SpeechInput.Callback {
         output.shutdown()
         cues.shutdown()
         releaseWakeLock()
+        VoiceBus.publishBridge(false)
         VoiceBus.publish(VoiceState.STOPPED, getString(R.string.state_stopped))
         super.onDestroy()
     }
@@ -164,11 +166,13 @@ class VoiceService : Service(), BridgeClient.Listener, SpeechInput.Callback {
     }
 
     override fun onConnected() {
+        VoiceBus.publishBridge(true)
         VoiceBus.publishStatus(getString(R.string.status_connected))
         if (!bridge.send(VoiceMessages.hello(BuildConfig.VERSION_NAME))) Log.w(TAG, "hello not sent")
     }
 
     override fun onRejected() {
+        VoiceBus.publishBridge(false)
         val message = getString(R.string.error_bridge_bad_token)
         if (currentId != null) speakLocal(message) else VoiceBus.publishStatus(message)
     }
@@ -179,6 +183,7 @@ class VoiceService : Service(), BridgeClient.Listener, SpeechInput.Callback {
 
     override fun onDisconnected(retryInSeconds: Int, reason: String) {
         Log.w(TAG, "Bridge disconnected: $reason")
+        VoiceBus.publishBridge(false)
         if (currentId != null) {
             currentId = null
             speakLocal(getString(R.string.error_no_bridge))
@@ -189,12 +194,20 @@ class VoiceService : Service(), BridgeClient.Listener, SpeechInput.Callback {
     override fun onMessage(message: BridgeMessage) {
         when (message) {
             is BridgeMessage.Ready -> VoiceBus.publishStatus(getString(R.string.status_ready, message.model))
-            is BridgeMessage.Say -> if (message.id == currentId) speak(message.text)
+            is BridgeMessage.Say -> if (message.id == currentId) onSay(message.id, message.text)
             is BridgeMessage.Status -> if (message.id == currentId) VoiceBus.publishStatus(message.text)
             is BridgeMessage.Done -> if (message.id == currentId) finishWhenSilent()
             is BridgeMessage.Error -> onBridgeError(message)
             is BridgeMessage.Invalid -> Log.w(TAG, "Ignoring invalid frame: ${message.reason}")
         }
+    }
+
+    /** Speaks a `say` frame and shows the whole reply of the turn on screen. */
+    private fun onSay(id: String, text: String) {
+        val shown = if (id == replyId) "${VoiceBus.reply} $text".trim() else text
+        replyId = id
+        VoiceBus.publishReply(shown)
+        speak(text)
     }
 
     private fun onBridgeError(message: BridgeMessage.Error) {

@@ -2,156 +2,172 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#FF101418"
-    android:orientation="vertical"
-    android:padding="16dp">
+    android:background="@color/bg"
+    android:fitsSystemWindows="true"
+    android:orientation="vertical">
+
+    <!-- Top bar: name, settings and status chips. -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:layout_marginTop="8dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingStart="24dp"
+        android:paddingEnd="8dp">
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="@string/app_name"
+            android:textColor="@color/text_primary"
+            android:textSize="22sp"
+            android:textStyle="bold" />
+
+        <ImageButton
+            android:id="@+id/settingsButton"
+            style="@style/IconButton"
+            android:contentDescription="@string/settings"
+            android:src="@drawable/ic_settings" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:paddingStart="24dp"
+        android:paddingEnd="24dp">
+
+        <TextView
+            android:id="@+id/a11yChip"
+            style="@style/Chip"
+            android:text="@string/chip_a11y_off" />
+
+        <TextView
+            android:id="@+id/bridgeChip"
+            style="@style/Chip"
+            android:layout_marginStart="8dp"
+            android:text="@string/chip_bridge_off" />
+    </LinearLayout>
+
+    <!-- The button: about 70 % of the width, centred. -->
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1">
+
+        <com.pupus.phone.ui.PttCircleView
+            android:id="@+id/pttCircle"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_gravity="center" />
+    </FrameLayout>
 
     <TextView
         android:id="@+id/stateText"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:gravity="center"
-        android:textColor="#FFFFFFFF"
-        android:textSize="32sp"
+        android:text="@string/state_disconnected"
+        android:textColor="@color/ptt_stopped"
+        android:textSize="40sp"
         android:textStyle="bold" />
+
+    <!-- Fixed line counts so the button does not jump while text arrives. -->
+    <TextView
+        android:id="@+id/transcriptText"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:ellipsize="start"
+        android:gravity="center"
+        android:lines="3"
+        android:paddingStart="24dp"
+        android:paddingEnd="24dp"
+        android:textColor="@color/text_primary"
+        android:textSize="24sp" />
+
+    <TextView
+        android:id="@+id/replyText"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:ellipsize="end"
+        android:gravity="center"
+        android:lines="2"
+        android:paddingStart="24dp"
+        android:paddingEnd="24dp"
+        android:textColor="@color/text_secondary"
+        android:textSize="18sp" />
 
     <TextView
         android:id="@+id/statusText"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:ellipsize="end"
         android:gravity="center"
-        android:maxLines="3"
-        android:minLines="2"
-        android:textColor="#FFB0BEC5"
-        android:textSize="18sp" />
+        android:singleLine="true"
+        android:paddingStart="24dp"
+        android:paddingEnd="24dp"
+        android:textColor="@color/text_tertiary"
+        android:textSize="14sp" />
 
-    <TextView
-        android:id="@+id/transcriptText"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:gravity="center"
-        android:maxLines="6"
-        android:ellipsize="start"
-        android:paddingTop="8dp"
-        android:paddingBottom="8dp"
-        android:textColor="#FFFFFFFF"
-        android:textSize="26sp"
-        android:visibility="gone" />
-
-    <FrameLayout
-        android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1">
-
-        <com.pupus.phone.ui.SquareButton
-            android:id="@+id/pttButton"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:layout_gravity="center"
-            android:contentDescription="@string/push_to_talk_description"
-            android:text="@string/push_to_talk"
-            android:textColor="#FFFFFFFF"
-            android:textSize="40sp" />
-    </FrameLayout>
-
+    <!-- Car mode: the whole card toggles the switch. -->
     <LinearLayout
+        android:id="@+id/carModeCard"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:layout_marginStart="16dp"
+        android:layout_marginTop="16dp"
+        android:layout_marginEnd="16dp"
+        android:background="@drawable/bg_card_clickable"
         android:gravity="center_vertical"
-        android:orientation="horizontal">
+        android:minHeight="72dp"
+        android:orientation="horizontal"
+        android:paddingStart="20dp"
+        android:paddingEnd="16dp">
 
-        <Switch
-            android:id="@+id/carModeSwitch"
+        <LinearLayout
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="@string/car_mode"
-            android:textColor="#FFFFFFFF"
-            android:textSize="20sp" />
-
-        <Button
-            android:id="@+id/settingsToggle"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/settings" />
-    </LinearLayout>
-
-    <ScrollView
-        android:id="@+id/settingsPanel"
-        android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1"
-        android:visibility="gone">
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
             android:orientation="vertical">
 
             <TextView
-                android:id="@+id/accessibilityText"
-                style="@style/SettingsText" />
-
-            <Button android:id="@+id/permissionsButton" style="@style/SettingsButton" android:text="@string/grant_permissions" />
-            <Button android:id="@+id/accessibilityButton" style="@style/SettingsButton" android:text="@string/open_accessibility" />
-            <Button android:id="@+id/batteryButton" style="@style/SettingsButton" android:text="@string/open_battery" />
-            <Button android:id="@+id/resetButton" style="@style/SettingsButton" android:text="@string/new_conversation" />
-
-            <TextView android:id="@+id/pauseLabel" style="@style/SettingsText" />
-            <SeekBar
-                android:id="@+id/pauseSeek"
-                android:layout_width="match_parent"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:contentDescription="@string/pause_to_send_help" />
-            <TextView style="@style/SettingsText" android:text="@string/pause_to_send_help" />
+                android:text="@string/car_mode"
+                android:textColor="@color/text_primary"
+                android:textSize="18sp"
+                android:textStyle="bold" />
 
-            <TextView style="@style/SettingsText" android:text="@string/recognizer_title" />
-            <RadioGroup
-                android:id="@+id/recognizerGroup"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content">
-                <RadioButton android:id="@+id/recognizerAuto" style="@style/SettingsText" android:text="@string/recognizer_auto" />
-                <RadioButton android:id="@+id/recognizerOnDevice" style="@style/SettingsText" android:text="@string/recognizer_on_device" />
-                <RadioButton android:id="@+id/recognizerDefault" style="@style/SettingsText" android:text="@string/recognizer_default" />
-            </RadioGroup>
-
-            <TextView style="@style/SettingsText" android:text="@string/bridge_url" />
-            <EditText
-                android:id="@+id/bridgeUrlInput"
-                style="@style/SettingsInput"
-                android:hint="@string/bridge_url_hint"
-                android:inputType="textUri" />
-
-            <TextView style="@style/SettingsText" android:text="@string/bridge_token" />
-            <EditText
-                android:id="@+id/bridgeTokenInput"
-                style="@style/SettingsInput"
-                android:inputType="textPassword" />
-
-            <Button android:id="@+id/saveButton" style="@style/SettingsButton" android:text="@string/save" />
-
-            <TextView style="@style/SettingsText" android:text="@string/device_token" />
             <TextView
-                android:id="@+id/deviceTokenText"
-                style="@style/SettingsText"
-                android:fontFamily="monospace"
-                android:textIsSelectable="true" />
-            <Button android:id="@+id/copyTokenButton" style="@style/SettingsButton" android:text="@string/copy" />
-
-            <TextView style="@style/SettingsText" android:text="@string/device_ips" />
-            <TextView
-                android:id="@+id/ipText"
-                style="@style/SettingsText"
-                android:fontFamily="monospace"
-                android:textIsSelectable="true" />
-
-            <Switch
-                android:id="@+id/allowLanSwitch"
-                style="@style/SettingsText"
-                android:layout_width="match_parent"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="@string/allow_lan" />
-            <TextView style="@style/SettingsText" android:text="@string/allow_lan_warning" />
+                android:text="@string/car_mode_help"
+                android:textColor="@color/text_tertiary"
+                android:textSize="14sp" />
         </LinearLayout>
-    </ScrollView>
+
+        <Switch
+            android:id="@+id/carModeSwitch"
+            android:layout_width="wrap_content"
+            android:layout_height="56dp"
+            android:contentDescription="@string/car_mode" />
+    </LinearLayout>
+
+    <Button
+        android:id="@+id/resetButton"
+        style="?android:attr/borderlessButtonStyle"
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:layout_marginStart="16dp"
+        android:layout_marginEnd="16dp"
+        android:layout_marginBottom="8dp"
+        android:text="@string/new_conversation"
+        android:textAllCaps="false"
+        android:textColor="@color/accent"
+        android:textSize="16sp" />
 </LinearLayout>

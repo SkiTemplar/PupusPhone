@@ -1,31 +1,147 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="ptt_idle">#FF1E88E5</color>
-    <color name="ptt_listening">#FFE53935</color>
-    <color name="ptt_thinking">#FFFB8C00</color>
-    <color name="ptt_speaking">#FF43A047</color>
-    <color name="ptt_stopped">#FF757575</color>
+    <!-- State colours: the main signal of the push-to-talk button. -->
+    <color name="ptt_stopped">#FF6B7684</color>
+    <color name="ptt_idle">#FF2F7DF6</color>
+    <color name="ptt_listening">#FFF0453A</color>
+    <color name="ptt_thinking">#FFFF9F1C</color>
+    <color name="ptt_speaking">#FF2FBF71</color>
+    <color name="on_dark_fill">#FFFFFFFF</color>
+    <color name="on_light_fill">#FF0B0F14</color>
 
-    <style name="AppTheme" parent="@android:style/Theme.Material.NoActionBar" />
+    <!-- Dark surfaces and text (AA contrast on bg and surface). -->
+    <color name="bg">#FF0B0F14</color>
+    <color name="surface">#FF151B23</color>
+    <color name="surface_high">#FF222B36</color>
+    <color name="input">#FF0F141A</color>
+    <color name="outline">#FF2E3947</color>
+    <color name="ripple">#33FFFFFF</color>
+    <color name="text_primary">#FFF2F5F8</color>
+    <color name="text_secondary">#FFB4BFCC</color>
+    <color name="text_tertiary">#FF8C98A6</color>
+    <color name="accent">#FF5AA2FF</color>
+    <color name="on_accent">#FF0B0F14</color>
+    <color name="status_ok">#FF3DD68C</color>
+    <color name="status_bad">#FFFF7A6E</color>
+    <color name="warning">#FFFFC266</color>
 
-    <style name="SettingsText">
+    <style name="AppTheme" parent="@android:style/Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/bg</item>
+        <item name="android:statusBarColor">@color/bg</item>
+        <item name="android:navigationBarColor">@color/bg</item>
+        <item name="android:colorAccent">@color/accent</item>
+        <item name="android:colorControlActivated">@color/accent</item>
+        <item name="android:textColorPrimary">@color/text_primary</item>
+        <item name="android:textColorSecondary">@color/text_secondary</item>
+    </style>
+
+    <style name="Chip">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">32dp</item>
+        <item name="android:background">@drawable/bg_chip</item>
+        <item name="android:gravity">center</item>
+        <item name="android:paddingStart">12dp</item>
+        <item name="android:paddingEnd">12dp</item>
+        <item name="android:textSize">14sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:singleLine">true</item>
+    </style>
+
+    <style name="IconButton">
+        <item name="android:layout_width">56dp</item>
+        <item name="android:layout_height">56dp</item>
+        <item name="android:padding">16dp</item>
+        <item name="android:scaleType">fitCenter</item>
+        <item name="android:background">?android:attr/selectableItemBackgroundBorderless</item>
+    </style>
+
+    <style name="GroupTitle">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:paddingStart">8dp</item>
+        <item name="android:paddingTop">24dp</item>
+        <item name="android:paddingBottom">8dp</item>
+        <item name="android:textColor">@color/accent</item>
+        <item name="android:textSize">14sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:textAllCaps">true</item>
+        <item name="android:letterSpacing">0.08</item>
+    </style>
+
+    <style name="Card">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:background">@drawable/bg_card</item>
+        <item name="android:orientation">vertical</item>
+        <item name="android:padding">16dp</item>
+    </style>
+
+    <style name="FieldLabel">
         <item name="android:layout_width">match_parent</item>
         <item name="android:layout_height">wrap_content</item>
         <item name="android:paddingTop">8dp</item>
-        <item name="android:textColor">#FFE0E0E0</item>
+        <item name="android:paddingBottom">8dp</item>
+        <item name="android:textColor">@color/text_secondary</item>
+        <item name="android:textSize">14sp</item>
+    </style>
+
+    <style name="BodyText">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:textColor">@color/text_primary</item>
         <item name="android:textSize">16sp</item>
+        <item name="android:lineSpacingMultiplier">1.15</item>
+    </style>
+
+    <style name="HelpText" parent="BodyText">
+        <item name="android:paddingTop">4dp</item>
+        <item name="android:textColor">@color/text_tertiary</item>
+        <item name="android:textSize">14sp</item>
     </style>
 
     <style name="SettingsInput">
         <item name="android:layout_width">match_parent</item>
         <item name="android:layout_height">wrap_content</item>
-        <item name="android:textColor">#FFFFFFFF</item>
-        <item name="android:textColorHint">#FF78909C</item>
+        <item name="android:minHeight">56dp</item>
+        <item name="android:background">@drawable/bg_input</item>
+        <item name="android:paddingStart">16dp</item>
+        <item name="android:paddingEnd">16dp</item>
+        <item name="android:textColor">@color/text_primary</item>
+        <item name="android:textColorHint">@color/text_tertiary</item>
+        <item name="android:textSize">16sp</item>
         <item name="android:singleLine">true</item>
     </style>
 
-    <style name="SettingsButton">
+    <style name="ButtonBase">
         <item name="android:layout_width">match_parent</item>
         <item name="android:layout_height">wrap_content</item>
+        <item name="android:minHeight">56dp</item>
+        <item name="android:layout_marginTop">8dp</item>
+        <item name="android:paddingStart">16dp</item>
+        <item name="android:paddingEnd">16dp</item>
+        <item name="android:gravity">center</item>
+        <item name="android:textAllCaps">false</item>
+        <item name="android:textSize">16sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:stateListAnimator">@null</item>
+    </style>
+
+    <style name="PrimaryButton" parent="ButtonBase">
+        <item name="android:background">@drawable/bg_button_primary</item>
+        <item name="android:textColor">@color/on_accent</item>
+    </style>
+
+    <style name="SecondaryButton" parent="ButtonBase">
+        <item name="android:background">@drawable/bg_button_secondary</item>
+        <item name="android:textColor">@color/text_primary</item>
+    </style>
+
+    <style name="Choice">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:minHeight">56dp</item>
+        <item name="android:textColor">@color/text_primary</item>
+        <item name="android:textSize">16sp</item>
+        <item name="android:paddingStart">8dp</item>
     </style>
 </resources>

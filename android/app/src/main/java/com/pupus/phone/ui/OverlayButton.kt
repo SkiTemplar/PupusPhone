@@ -1,32 +1,81 @@
 package com.pupus.phone.ui
 
 import android.accessibilityservice.AccessibilityService
+import android.animation.ValueAnimator
 import android.annotation.SuppressLint
 import android.graphics.PixelFormat
-import android.graphics.drawable.GradientDrawable
 import android.util.Log
 import android.view.Gravity
 import android.view.MotionEvent
 import android.view.View
 import android.view.ViewConfiguration
 import android.view.WindowManager
-import android.widget.TextView
-import com.pupus.phone.R
+import android.view.animation.DecelerateInterpolator
 import com.pupus.phone.voice.VoiceBus
 import com.pupus.phone.voice.VoiceLauncher
 import com.pupus.phone.voice.VoiceState
+import java.util.concurrent.CopyOnWriteArrayList
 import kotlin.math.abs
 
+/** Tracks whether a PupusPhone screen is in front, so the overlay does not cover it. Main thread only. */
+object AppForeground {
+    private var resumed = 0
+    private val listeners = CopyOnWriteArrayList<() -> Unit>()
+
+    val isVisible: Boolean get() = resumed > 0
+
+    fun onResume() {
+        resumed++
+        listeners.forEach { it() }
+    }
+
+    fun onPause() {
+        resumed = (resumed - 1).coerceAtLeast(0)
+        listeners.forEach { it() }
+    }
+
+    fun addListener(listener: () -> Unit) {
+        listeners.add(listener)
+    }
+
+    fun removeListener(listener: () -> Unit) {
+        listeners.remove(listener)
+    }
+}
+
 /**
- * Draggable round push-to-talk button drawn as TYPE_ACCESSIBILITY_OVERLAY, so it
- * floats over any app (e.g. Spotify) without SYSTEM_ALERT_WINDOW.
+ * Draggable round push-to-talk button drawn as TYPE_ACCESSIBILITY_OVERLAY, so it floats
+ * over any app (e.g. Spotify) without SYSTEM_ALERT_WINDOW. Same circle as the main
+ * screen (72 dp plus glow room); it snaps to the nearest side edge when released.
  */
 class OverlayButton(private val service: AccessibilityService) {
     private val windowManager = service.getSystemService(WindowManager::class.java)
-    private val sizePx = (SIZE_DP * service.resources.displayMetrics.density).toInt()
-    private val background = GradientDrawable().apply { shape = GradientDrawable.OVAL }
-    private var view: TextView? = null
-    private val listener = VoiceBus.Listener { state, _ -> render(state) }
+    private val density = service.resources.displayMetrics.density
+    private val sizePx = (WINDOW_DP * density).toInt()
+    private val marginPx = (MARGIN_DP * density).toInt()
+    private var view: PttCircleView? = null
+    private var snapAnimator: ValueAnimator? = null
+    private var state = VoiceState.STOPPED
+    private var isBridgeConnected = false
+    private val listener = VoiceBus.Listener { newState, _ ->
+        state = newState
+        render()
+    }
+    private val detailsListener = VoiceBus.DetailsListener { isConnected, _ ->
+        isBridgeConnected = isConnected
+        render()
+    }
+    private val levelListener = VoiceBus.LevelListener { rmsDb -> view?.setLevel(rmsDb) }
+    private val updateVisibility = Runnable {
+        view?.visibility = if (AppForeground.isVisible) View.GONE else View.VISIBLE
+    }
+
+    /** Debounced: switching between two app screens must not flash the overlay. */
+    private val foregroundListener = {
+        view?.removeCallbacks(updateVisibility)
+        view?.postDelayed(updateVisibility, VISIBILITY_DELAY_MS)
+        Unit
+    }
 
     private val params = WindowManager.LayoutParams(
         sizePx,
@@ -36,20 +85,13 @@ class OverlayButton(private val service: AccessibilityService) {
         PixelFormat.TRANSLUCENT,
     ).apply {
         gravity = Gravity.TOP or Gravity.START
-        x = service.resources.displayMetrics.widthPixels - sizePx - MARGIN_PX
+        x = screenWidth() - sizePx - marginPx
         y = service.resources.displayMetrics.heightPixels / 3
     }
 
     fun show() {
         if (view != null) return
-        val button = TextView(service).apply {
-            text = "🎤"
-            textSize = ICON_SP
-            gravity = Gravity.CENTER
-            contentDescription = service.getString(R.string.push_to_talk_description)
-            this.background = this@OverlayButton.background
-            elevation = ELEVATION_PX
-        }
+        val button = PttCircleView(service).apply { circleFraction = CIRCLE_DP / WINDOW_DP }
         attachTouch(button)
         try {
             windowManager.addView(button, params)
@@ -58,11 +100,19 @@ class OverlayButton(private val service: AccessibilityService) {
             return
         }
         view = button
+        updateVisibility.run()
+        AppForeground.addListener(foregroundListener)
         VoiceBus.addListener(listener)
+        VoiceBus.addDetailsListener(detailsListener)
+        VoiceBus.addLevelListener(levelListener)
     }
 
     fun hide() {
+        AppForeground.removeListener(foregroundListener)
         VoiceBus.removeListener(listener)
+        VoiceBus.removeDetailsListener(detailsListener)
+        VoiceBus.removeLevelListener(levelListener)
+        snapAnimator?.cancel()
         val current = view ?: return
         view = null
         try {
@@ -72,11 +122,13 @@ class OverlayButton(private val service: AccessibilityService) {
         }
     }
 
-    private fun render(state: VoiceState) {
-        background.setColor(service.getColor(PttColors.colorRes(state)))
-        view?.alpha = if (state == VoiceState.STOPPED) STOPPED_ALPHA else 1f
+    private fun render() {
+        val current = view ?: return
+        current.render(PttStyles.of(state, isBridgeConnected))
+        current.alpha = if (state == VoiceState.STOPPED) STOPPED_ALPHA else 1f
         // Car mode keeps the screen on through this window while another app is in front.
-        view?.keepScreenOn = state != VoiceState.STOPPED
+        current.keepScreenOn = state != VoiceState.STOPPED
+        updateVisibility.run()
     }
 
     @SuppressLint("ClickableViewAccessibility")
@@ -90,8 +142,11 @@ class OverlayButton(private val service: AccessibilityService) {
         button.setOnTouchListener { v, event ->
             when (event.actionMasked) {
                 MotionEvent.ACTION_DOWN -> {
-                    startX = event.rawX; startY = event.rawY
-                    originX = params.x; originY = params.y
+                    snapAnimator?.cancel()
+                    startX = event.rawX
+                    startY = event.rawY
+                    originX = params.x
+                    originY = params.y
                     isDragging = false
                 }
                 MotionEvent.ACTION_MOVE -> {
@@ -100,15 +155,34 @@ class OverlayButton(private val service: AccessibilityService) {
                     if (!isDragging && (abs(dx) > slop || abs(dy) > slop)) isDragging = true
                     if (isDragging) move(v, originX + dx.toInt(), originY + dy.toInt())
                 }
-                MotionEvent.ACTION_UP -> if (!isDragging) VoiceLauncher.tap(service)
+                MotionEvent.ACTION_UP -> if (isDragging) snap(v) else VoiceLauncher.tap(service)
+                MotionEvent.ACTION_CANCEL -> if (isDragging) snap(v)
             }
             true
+        }
+    }
+
+    private fun snap(v: View) {
+        val bounds = windowManager.currentWindowMetrics.bounds
+        val targetX = OverlaySnap.targetX(params.x, sizePx, bounds.width(), marginPx)
+        val targetY = OverlaySnap.clampY(params.y, sizePx, bounds.height(), marginPx)
+        val fromX = params.x
+        val fromY = params.y
+        snapAnimator = ValueAnimator.ofFloat(0f, 1f).apply {
+            duration = SNAP_MS
+            interpolator = DecelerateInterpolator()
+            addUpdateListener {
+                val f = it.animatedValue as Float
+                move(v, fromX + ((targetX - fromX) * f).toInt(), fromY + ((targetY - fromY) * f).toInt())
+            }
+            start()
         }
     }
 
     private fun move(v: View, x: Int, y: Int) {
         params.x = x
         params.y = y
+        if (!v.isAttachedToWindow) return
         try {
             windowManager.updateViewLayout(v, params)
         } catch (e: IllegalArgumentException) {
@@ -116,30 +190,15 @@ class OverlayButton(private val service: AccessibilityService) {
         }
     }
 
+    private fun screenWidth(): Int = windowManager.currentWindowMetrics.bounds.width()
+
     private companion object {
         const val TAG = "PupusOverlay"
-        const val SIZE_DP = 72
-        const val MARGIN_PX = 24
-        const val ICON_SP = 28f
-        const val ELEVATION_PX = 8f
-        const val STOPPED_ALPHA = 0.6f
-    }
-}
-
-object PttColors {
-    fun colorRes(state: VoiceState): Int = when (state) {
-        VoiceState.STOPPED -> R.color.ptt_stopped
-        VoiceState.IDLE -> R.color.ptt_idle
-        VoiceState.LISTENING -> R.color.ptt_listening
-        VoiceState.THINKING -> R.color.ptt_thinking
-        VoiceState.SPEAKING -> R.color.ptt_speaking
-    }
-
-    fun labelRes(state: VoiceState): Int = when (state) {
-        VoiceState.STOPPED -> R.string.state_stopped
-        VoiceState.IDLE -> R.string.state_idle
-        VoiceState.LISTENING -> R.string.state_listening
-        VoiceState.THINKING -> R.string.state_thinking
-        VoiceState.SPEAKING -> R.string.state_speaking
+        const val CIRCLE_DP = 72f
+        const val WINDOW_DP = 96f
+        const val MARGIN_DP = 4f
+        const val STOPPED_ALPHA = 0.7f
+        const val SNAP_MS = 220L
+        const val VISIBILITY_DELAY_MS = 150L
     }
 }

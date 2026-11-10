@@ -1,180 +1,146 @@
 package com.pupus.phone.ui
 
-import android.Manifest
 import android.app.Activity
-import android.content.ActivityNotFoundException
-import android.content.ClipData
-import android.content.ClipDescription
-import android.content.ClipboardManager
 import android.content.Intent
-import android.content.pm.PackageManager
-import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
-import android.os.PersistableBundle
-import android.provider.Settings
-import android.util.Log
 import android.view.View
 import android.view.WindowManager
-import android.widget.Button
-import android.widget.EditText
 import android.widget.Switch
 import android.widget.TextView
-import android.widget.Toast
-import com.pupus.phone.AppSettings
-import com.pupus.phone.NetworkAddresses
 import com.pupus.phone.PhoneAccessibilityService
 import com.pupus.phone.R
 import com.pupus.phone.voice.VoiceBus
 import com.pupus.phone.voice.VoiceLauncher
 import com.pupus.phone.voice.VoiceService
 import com.pupus.phone.voice.VoiceState
-import com.pupus.phone.voice.VoiceUrl
 
+/** Driving screen: one big push-to-talk circle, the state word and the conversation text. */
 class MainActivity : Activity() {
-    private lateinit var settings: AppSettings
+    private lateinit var circle: PttCircleView
     private lateinit var stateText: TextView
-    private lateinit var statusText: TextView
     private lateinit var transcriptText: TextView
+    private lateinit var replyText: TextView
+    private lateinit var statusText: TextView
+    private lateinit var a11yChip: TextView
+    private lateinit var bridgeChip: TextView
     private lateinit var carMode: Switch
-    private val pttBackground = GradientDrawable().apply { shape = GradientDrawable.OVAL }
-    private val voiceListener = VoiceBus.Listener { state, status -> render(state, status) }
-    private val transcriptListener = VoiceBus.TranscriptListener { text -> renderTranscript(text) }
+    private var state = VoiceState.STOPPED
+    private var isBridgeConnected = false
+    private var transcript = ""
+
+    private val voiceListener = VoiceBus.Listener { newState, status ->
+        state = newState
+        statusText.text = status
+        render()
+    }
+    private val transcriptListener = VoiceBus.TranscriptListener { text ->
+        transcript = text
+        renderTranscript()
+    }
+    private val detailsListener = VoiceBus.DetailsListener { isConnected, reply ->
+        isBridgeConnected = isConnected
+        replyText.text = reply
+        render()
+    }
+    private val levelListener = VoiceBus.LevelListener { rmsDb -> circle.setLevel(rmsDb) }
+
+    /** The accessibility service binds asynchronously (e.g. after an update): poll while visible. */
+    private val a11yPoll = object : Runnable {
+        override fun run() {
+            renderA11yChip()
+            a11yChip.postDelayed(this, A11Y_POLL_MS)
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
-        settings = AppSettings(this)
+        circle = findViewById(R.id.pttCircle)
         stateText = findViewById(R.id.stateText)
-        statusText = findViewById(R.id.statusText)
         transcriptText = findViewById(R.id.transcriptText)
+        replyText = findViewById(R.id.replyText)
+        statusText = findViewById(R.id.statusText)
+        a11yChip = findViewById(R.id.a11yChip)
+        bridgeChip = findViewById(R.id.bridgeChip)
         carMode = findViewById(R.id.carModeSwitch)
-        bindVoiceControls()
-        bindSettings()
-        requestMissingPermissions()
+        bindControls()
+        requestVoicePermissions()
     }
 
     override fun onResume() {
         super.onResume()
+        AppForeground.onResume()
         VoiceBus.addListener(voiceListener)
         VoiceBus.addTranscriptListener(transcriptListener)
-        refreshSettingsInfo()
+        VoiceBus.addDetailsListener(detailsListener)
+        VoiceBus.addLevelListener(levelListener)
+        a11yPoll.run()
     }
 
     override fun onPause() {
+        AppForeground.onPause()
         VoiceBus.removeListener(voiceListener)
         VoiceBus.removeTranscriptListener(transcriptListener)
+        VoiceBus.removeDetailsListener(detailsListener)
+        VoiceBus.removeLevelListener(levelListener)
+        a11yChip.removeCallbacks(a11yPoll)
         super.onPause()
     }
 
-    private fun bindVoiceControls() {
-        findViewById<Button>(R.id.pttButton).apply {
-            background = pttBackground
-            setOnClickListener { VoiceLauncher.tap(this@MainActivity) }
-        }
+    private fun bindControls() {
+        // When car mode is off, a tap starts it and begins listening.
+        circle.setOnClickListener { VoiceLauncher.tap(this) }
+        findViewById<View>(R.id.carModeCard).setOnClickListener { carMode.toggle() }
         carMode.setOnCheckedChangeListener { _, isChecked ->
             val isRunning = VoiceService.current != null
             if (isChecked && !isRunning) VoiceLauncher.start(this)
             if (!isChecked && isRunning) VoiceLauncher.stop(this)
         }
-        findViewById<Button>(R.id.settingsToggle).setOnClickListener {
-            val panel = findViewById<View>(R.id.settingsPanel)
-            panel.visibility = if (panel.visibility == View.VISIBLE) View.GONE else View.VISIBLE
+        findViewById<View>(R.id.settingsButton).setOnClickListener {
+            startActivity(Intent(this, SettingsActivity::class.java))
         }
+        findViewById<View>(R.id.resetButton).setOnClickListener { VoiceLauncher.reset(this) }
     }
 
-    private fun render(state: VoiceState, status: String) {
-        stateText.setText(PttColors.labelRes(state))
-        statusText.text = status
-        pttBackground.setColor(getColor(PttColors.colorRes(state)))
+    private fun render() {
+        val style = PttStyles.of(state, isBridgeConnected)
+        circle.render(style)
+        stateText.setText(style.labelRes)
+        stateText.setTextColor(getColor(style.colorRes))
+        renderBridgeChip()
+        renderTranscript()
         val isActive = state != VoiceState.STOPPED
         if (carMode.isChecked != isActive) carMode.isChecked = isActive
         if (isActive) window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         else window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
     }
 
-    /** Live dictation: shows what the recognizer has understood so far. */
-    private fun renderTranscript(text: String) {
-        transcriptText.text = text
-        transcriptText.visibility = if (text.isEmpty()) View.GONE else View.VISIBLE
-    }
-
-    private fun bindSettings() {
-        val urlInput = findViewById<EditText>(R.id.bridgeUrlInput).apply { setText(settings.bridgeUrl) }
-        val tokenInput = findViewById<EditText>(R.id.bridgeTokenInput).apply { setText(settings.bridgeToken) }
-        findViewById<Button>(R.id.saveButton).setOnClickListener {
-            saveBridge(urlInput.text.toString(), tokenInput.text.toString())
-        }
-        findViewById<Button>(R.id.copyTokenButton).setOnClickListener { copyDeviceToken() }
-        bindLanSwitch()
-        VoiceSettingsPanel(this, settings).bind()
-        findViewById<Button>(R.id.permissionsButton).setOnClickListener { requestMissingPermissions() }
-        findViewById<Button>(R.id.accessibilityButton).setOnClickListener {
-            openSettings(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
-        }
-        findViewById<Button>(R.id.batteryButton).setOnClickListener {
-            openSettings(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
-        }
-        findViewById<Button>(R.id.resetButton).setOnClickListener { VoiceLauncher.reset(this) }
-    }
-
-    private fun bindLanSwitch() {
-        findViewById<Switch>(R.id.allowLanSwitch).apply {
-            isChecked = settings.isLanAllowed
-            setOnCheckedChangeListener { _, isChecked ->
-                settings.isLanAllowed = isChecked
-                PhoneAccessibilityService.instance?.rebindApi()
-            }
-        }
-    }
-
-    private fun saveBridge(url: String, token: String) {
-        if (url.isNotBlank() && !VoiceUrl.isValidBase(url)) {
-            Toast.makeText(this, R.string.invalid_bridge_url, Toast.LENGTH_LONG).show()
+    /** Live dictation in large text; a hint when there is nothing to show. */
+    private fun renderTranscript() {
+        if (transcript.isNotEmpty()) {
+            transcriptText.text = transcript
+            transcriptText.setTextColor(getColor(R.color.text_primary))
             return
         }
-        settings.bridgeUrl = url
-        settings.bridgeToken = token
-        VoiceService.current?.connectBridge()
-        Toast.makeText(this, R.string.saved, Toast.LENGTH_SHORT).show()
+        transcriptText.setText(if (state == VoiceState.STOPPED) R.string.hint_stopped else R.string.hint_idle)
+        transcriptText.setTextColor(getColor(R.color.text_tertiary))
     }
 
-    private fun copyDeviceToken() {
-        val clipboard = getSystemService(ClipboardManager::class.java)
-        val clip = ClipData.newPlainText("PupusPhone token", settings.deviceToken).apply {
-            // Hides the token from the clipboard preview and keyboard suggestions.
-            description.extras = PersistableBundle().apply { putBoolean(ClipDescription.EXTRA_IS_SENSITIVE, true) }
-        }
-        clipboard.setPrimaryClip(clip)
-        Toast.makeText(this, R.string.copied, Toast.LENGTH_SHORT).show()
+    private fun renderA11yChip() {
+        val isOn = PhoneAccessibilityService.instance != null
+        renderChip(a11yChip, isOn, if (isOn) R.string.chip_a11y_on else R.string.chip_a11y_off)
     }
 
-    private fun refreshSettingsInfo() {
-        val isA11yOn = PhoneAccessibilityService.instance != null
-        findViewById<TextView>(R.id.accessibilityText)
-            .setText(if (isA11yOn) R.string.accessibility_on else R.string.accessibility_off)
-        findViewById<TextView>(R.id.deviceTokenText).text = settings.deviceToken
-        val ips = NetworkAddresses.list()
-        findViewById<TextView>(R.id.ipText).text =
-            if (ips.isEmpty()) getString(R.string.no_ips) else ips.joinToString("\n")
+    private fun renderBridgeChip() {
+        renderChip(bridgeChip, isBridgeConnected, if (isBridgeConnected) R.string.chip_bridge_on else R.string.chip_bridge_off)
     }
 
-    private fun requestMissingPermissions() {
-        val missing = listOf(Manifest.permission.RECORD_AUDIO, Manifest.permission.POST_NOTIFICATIONS)
-            .filter { checkSelfPermission(it) != PackageManager.PERMISSION_GRANTED }
-        if (missing.isNotEmpty()) requestPermissions(missing.toTypedArray(), PERMISSIONS_REQUEST)
-    }
-
-    private fun openSettings(intent: Intent) {
-        try {
-            startActivity(intent)
-        } catch (e: ActivityNotFoundException) {
-            Log.e(TAG, "Settings screen not available: ${intent.action}", e)
-            startActivity(Intent(Settings.ACTION_SETTINGS))
-        }
+    private fun renderChip(chip: TextView, isOk: Boolean, textRes: Int) {
+        chip.setText(textRes)
+        chip.setTextColor(getColor(if (isOk) R.color.status_ok else R.color.status_bad))
     }
 
     private companion object {
-        const val TAG = "PupusMain"
-        const val PERMISSIONS_REQUEST = 1
+        const val A11Y_POLL_MS = 2_000L
     }
 }

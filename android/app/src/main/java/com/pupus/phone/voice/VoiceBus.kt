@@ -23,7 +23,27 @@ object VoiceBus {
         fun onTranscript(text: String)
     }
 
+    /** Microphone level (SpeechRecognizer rmsdB) while listening; high frequency. */
+    fun interface LevelListener {
+        fun onLevel(rmsDb: Float)
+    }
+
+    /** Bridge connection and the last assistant reply (text of `say` frames). */
+    fun interface DetailsListener {
+        fun onDetails(isBridgeConnected: Boolean, reply: String)
+    }
+
     private val main = Handler(Looper.getMainLooper())
+    private val levelListeners = CopyOnWriteArrayList<LevelListener>()
+    private val detailsListeners = CopyOnWriteArrayList<DetailsListener>()
+
+    @Volatile
+    var isBridgeConnected: Boolean = false
+        private set
+
+    @Volatile
+    var reply: String = ""
+        private set
     private val listeners = CopyOnWriteArrayList<Listener>()
     private val transcriptListeners = CopyOnWriteArrayList<TranscriptListener>()
 
@@ -68,6 +88,41 @@ object VoiceBus {
     fun publishTranscript(text: String) {
         transcript = text
         main.post { transcriptListeners.forEach { it.onTranscript(transcript) } }
+    }
+
+    fun addLevelListener(listener: LevelListener) {
+        levelListeners.add(listener)
+    }
+
+    fun removeLevelListener(listener: LevelListener) {
+        levelListeners.remove(listener)
+    }
+
+    fun publishLevel(rmsDb: Float) {
+        main.post { levelListeners.forEach { it.onLevel(rmsDb) } }
+    }
+
+    fun addDetailsListener(listener: DetailsListener) {
+        detailsListeners.add(listener)
+        listener.onDetails(isBridgeConnected, reply)
+    }
+
+    fun removeDetailsListener(listener: DetailsListener) {
+        detailsListeners.remove(listener)
+    }
+
+    fun publishBridge(isConnected: Boolean) {
+        isBridgeConnected = isConnected
+        publishDetails()
+    }
+
+    fun publishReply(text: String) {
+        reply = text
+        publishDetails()
+    }
+
+    private fun publishDetails() {
+        main.post { detailsListeners.forEach { it.onDetails(isBridgeConnected, reply) } }
     }
 }
 

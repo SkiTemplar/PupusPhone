@@ -8,6 +8,7 @@ import com.pupus.phone.api.DeviceApiHost
 import com.pupus.phone.api.RouteHandler
 import com.pupus.phone.device.AndroidDeviceController
 import com.pupus.phone.ui.OverlayButton
+import com.pupus.phone.voice.AudioCues
 
 /** Hosts the device API servers (port 8765, see [DeviceApiHost]) and the push-to-talk overlay. */
 class PhoneAccessibilityService : AccessibilityService() {
@@ -16,6 +17,7 @@ class PhoneAccessibilityService : AccessibilityService() {
 
     override fun onServiceConnected() {
         super.onServiceConnected()
+        AudioCues.recoverMutedStreams(this)
         instance = this
         startServer()
         overlay = OverlayButton(this).also { it.show() }

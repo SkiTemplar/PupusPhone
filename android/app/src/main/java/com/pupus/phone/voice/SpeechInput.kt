@@ -67,7 +67,7 @@ class SpeechInput(
         if (recognizer != null && provider.choose(mode) != kind) destroyRecognizer()
         session = DictationSession(config, SystemClock::elapsedRealtime).also { it.start() }
         cues.listeningStarted()
-        main.postDelayed(listenNow, AudioCues.START_TONE_MS + TONE_MARGIN_MS)
+        main.postDelayed(listenNow, AudioCues.START_DELAY_MS)
         main.postDelayed(tick, TICK_MS)
         provider.probe(buildIntent())
     }
@@ -83,7 +83,7 @@ class SpeechInput(
         if (!isActive) return
         session = null
         stopListening()
-        cues.release()
+        cues.listeningEnded()
     }
 
     fun destroy() {
@@ -94,6 +94,7 @@ class SpeechInput(
     private fun listen() {
         val sr = recognizer ?: createRecognizer()
         generation++
+        cues.muteRecognizerEarcons()
         sr.setRecognitionListener(Listener(generation))
         sr.startListening(buildIntent())
     }
@@ -126,15 +127,15 @@ class SpeechInput(
                 main.postDelayed(listenNow, RECREATE_DELAY_MS)
             }
             is DictationStep.Send -> finish {
-                cues.utteranceSent()
+                cues.listeningEnded()
                 it.onUtterance(step.text)
             }
             DictationStep.NothingHeard -> finish {
-                cues.release()
+                cues.listeningEnded()
                 it.onNothingHeard()
             }
             is DictationStep.Fail -> finish {
-                cues.release()
+                cues.listeningEnded()
                 it.onSpeechError(step.code)
             }
         }
@@ -198,7 +199,9 @@ class SpeechInput(
 
         override fun onReadyForSpeech(params: Bundle?) = Unit
         override fun onBeginningOfSpeech() = Unit
-        override fun onRmsChanged(rmsdB: Float) = Unit
+        override fun onRmsChanged(rmsdB: Float) {
+            if (isCurrent) VoiceBus.publishLevel(rmsdB)
+        }
         override fun onBufferReceived(buffer: ByteArray?) = Unit
         override fun onEndOfSpeech() = Unit
         override fun onEvent(eventType: Int, params: Bundle?) = Unit
@@ -210,7 +213,6 @@ class SpeechInput(
     private companion object {
         const val TAG = "PupusStt"
         const val TICK_MS = 200L
-        const val TONE_MARGIN_MS = 80L
         const val RECREATE_DELAY_MS = 250L
     }
 }
