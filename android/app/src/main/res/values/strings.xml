@@ -38,6 +38,15 @@
     <string name="device_token">Token del dispositivo (device API)</string>
     <string name="copy">Copiar</string>
     <string name="copied">Token copiado</string>
+    <string name="show">Mostrar</string>
+    <string name="hide">Ocultar</string>
+    <string name="regenerate_token">Regenerar token</string>
+    <string name="regenerate_token_title">¿Regenerar el token?</string>
+    <string name="regenerate_token_message">El token actual dejará de funcionar al momento. Tendrás que copiar el nuevo y actualizarlo en el bridge del PC o de Termux.</string>
+    <string name="regenerate">Regenerar</string>
+    <string name="cancel">Cancelar</string>
+    <string name="token_regenerated">Token regenerado: actualízalo en el bridge</string>
+    <string name="token_not_saved">El token nuevo está activo pero no se pudo guardar: cambiará al reiniciar</string>
     <string name="device_ips">Direcciones IP del móvil</string>
     <string name="no_ips">Sin direcciones de red</string>
     <string name="grant_permissions">Conceder permisos (micrófono y notificaciones)</string>

@@ -2,6 +2,7 @@ package com.pupus.phone.ui
 
 import android.Manifest
 import android.app.Activity
+import android.app.AlertDialog
 import android.content.ActivityNotFoundException
 import android.content.ClipData
 import android.content.ClipDescription
@@ -13,6 +14,8 @@ import android.os.PersistableBundle
 import android.provider.Settings
 import android.util.Log
 import android.view.View
+import android.view.WindowManager
+import android.widget.Button
 import android.widget.EditText
 import android.widget.Switch
 import android.widget.TextView
@@ -21,15 +24,19 @@ import com.pupus.phone.AppSettings
 import com.pupus.phone.NetworkAddresses
 import com.pupus.phone.PhoneAccessibilityService
 import com.pupus.phone.R
+import com.pupus.phone.api.DeviceToken
 import com.pupus.phone.voice.VoiceService
 import com.pupus.phone.voice.VoiceUrl
 
 /** Settings grouped in cards: connection, voice, security and permissions. */
 class SettingsActivity : Activity() {
     private lateinit var settings: AppSettings
+    private var isTokenShown = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // Keeps the device token out of screenshots and the recents thumbnail.
+        window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
         setContentView(R.layout.activity_settings)
         settings = AppSettings(this)
         findViewById<View>(R.id.backButton).setOnClickListener { finish() }
@@ -57,6 +64,36 @@ class SettingsActivity : Activity() {
             saveBridge(urlInput.text.toString(), tokenInput.text.toString())
         }
         findViewById<View>(R.id.copyTokenButton).setOnClickListener { copyDeviceToken() }
+        findViewById<View>(R.id.showTokenButton).setOnClickListener {
+            isTokenShown = !isTokenShown
+            renderDeviceToken()
+        }
+        findViewById<View>(R.id.regenerateTokenButton).setOnClickListener { confirmRegenerateToken() }
+    }
+
+    /** Masked (`abcd…wxyz`) unless "Mostrar" was pressed. */
+    private fun renderDeviceToken() {
+        val token = settings.deviceToken
+        findViewById<TextView>(R.id.deviceTokenText).text = if (isTokenShown) token else DeviceToken.mask(token)
+        findViewById<Button>(R.id.showTokenButton).setText(if (isTokenShown) R.string.hide else R.string.show)
+    }
+
+    private fun confirmRegenerateToken() {
+        AlertDialog.Builder(this)
+            .setTitle(R.string.regenerate_token_title)
+            .setMessage(R.string.regenerate_token_message)
+            .setPositiveButton(R.string.regenerate) { _, _ -> regenerateToken() }
+            .setNegativeButton(R.string.cancel, null)
+            .show()
+    }
+
+    /** The device API reads the token per request, so the old one is rejected from now on. */
+    private fun regenerateToken() {
+        val isStored = settings.regenerateDeviceToken()
+        isTokenShown = false
+        renderDeviceToken()
+        val message = if (isStored) R.string.token_regenerated else R.string.token_not_saved
+        Toast.makeText(this, message, Toast.LENGTH_LONG).show()
     }
 
     private fun bindLanSwitch() {
@@ -106,7 +143,7 @@ class SettingsActivity : Activity() {
             setText(if (isA11yOn) R.string.accessibility_on else R.string.accessibility_off)
             setTextColor(getColor(if (isA11yOn) R.color.status_ok else R.color.status_bad))
         }
-        findViewById<TextView>(R.id.deviceTokenText).text = settings.deviceToken
+        renderDeviceToken()
         val ips = NetworkAddresses.list()
         findViewById<TextView>(R.id.ipText).text =
             if (ips.isEmpty()) getString(R.string.no_ips) else ips.joinToString("\n")

@@ -6,6 +6,7 @@ import android.annotation.SuppressLint
 import android.graphics.PixelFormat
 import android.util.Log
 import android.view.Gravity
+import android.view.HapticFeedbackConstants
 import android.view.MotionEvent
 import android.view.View
 import android.view.ViewConfiguration
@@ -47,6 +48,8 @@ object AppForeground {
  * Draggable round push-to-talk button drawn as TYPE_ACCESSIBILITY_OVERLAY, so it floats
  * over any app (e.g. Spotify) without SYSTEM_ALERT_WINDOW. Same circle as the main
  * screen (72 dp plus glow room); it snaps to the nearest side edge when released.
+ * While dragging, a ✕ target appears at the bottom; dropping the bubble on it turns car
+ * mode off and hides the bubble until car mode is started again.
  */
 class OverlayButton(private val service: AccessibilityService) {
     private val windowManager = service.getSystemService(WindowManager::class.java)
@@ -57,8 +60,19 @@ class OverlayButton(private val service: AccessibilityService) {
     private var snapAnimator: ValueAnimator? = null
     private var state = VoiceState.STOPPED
     private var isBridgeConnected = false
+    private val dismissTarget = DismissTarget(service, windowManager)
+    private var dismissZone: DismissZone? = null
+    private var isOverTarget = false
+
+    /** Dropped on the dismiss target: hidden until car mode starts again. */
+    private var isDismissed = false
+
+    /** Late events from the stopping service (e.g. IDLE after TTS) must not bring the bubble back. */
+    private var hasStoppedSinceDismiss = false
     private val listener = VoiceBus.Listener { newState, _ ->
         state = newState
+        if (newState == VoiceState.STOPPED) hasStoppedSinceDismiss = true
+        else if (hasStoppedSinceDismiss) isDismissed = false
         render()
     }
     private val detailsListener = VoiceBus.DetailsListener { isConnected, _ ->
@@ -67,7 +81,7 @@ class OverlayButton(private val service: AccessibilityService) {
     }
     private val levelListener = VoiceBus.LevelListener { rmsDb -> view?.setLevel(rmsDb) }
     private val updateVisibility = Runnable {
-        view?.visibility = if (AppForeground.isVisible) View.GONE else View.VISIBLE
+        view?.visibility = if (AppForeground.isVisible || isDismissed) View.GONE else View.VISIBLE
     }
 
     /** Debounced: switching between two app screens must not flash the overlay. */
@@ -93,10 +107,13 @@ class OverlayButton(private val service: AccessibilityService) {
         if (view != null) return
         val button = PttCircleView(service).apply { circleFraction = CIRCLE_DP / WINDOW_DP }
         attachTouch(button)
+        // Added first so the bubble is drawn above the target when dropped on it.
+        dismissTarget.attach()
         try {
             windowManager.addView(button, params)
         } catch (e: RuntimeException) {
             Log.e(TAG, "Cannot add overlay", e)
+            dismissTarget.detach()
             return
         }
         view = button
@@ -113,6 +130,8 @@ class OverlayButton(private val service: AccessibilityService) {
         VoiceBus.removeDetailsListener(detailsListener)
         VoiceBus.removeLevelListener(levelListener)
         snapAnimator?.cancel()
+        endDrag()
+        dismissTarget.detach()
         val current = view ?: return
         view = null
         try {
@@ -152,14 +171,54 @@ class OverlayButton(private val service: AccessibilityService) {
                 MotionEvent.ACTION_MOVE -> {
                     val dx = event.rawX - startX
                     val dy = event.rawY - startY
-                    if (!isDragging && (abs(dx) > slop || abs(dy) > slop)) isDragging = true
-                    if (isDragging) move(v, originX + dx.toInt(), originY + dy.toInt())
+                    if (!isDragging && (abs(dx) > slop || abs(dy) > slop)) {
+                        isDragging = true
+                        dismissZone = dismissTarget.show()
+                    }
+                    if (isDragging) dragTo(v, BubblePosition(originX + dx.toInt(), originY + dy.toInt()))
                 }
-                MotionEvent.ACTION_UP -> if (isDragging) snap(v) else VoiceLauncher.tap(service)
-                MotionEvent.ACTION_CANCEL -> if (isDragging) snap(v)
+                MotionEvent.ACTION_UP -> when {
+                    !isDragging -> VoiceLauncher.tap(service)
+                    isOverTarget -> dismiss(v, BubblePosition(originX, originY))
+                    else -> release(v)
+                }
+                MotionEvent.ACTION_CANCEL -> if (isDragging) release(v)
             }
             true
         }
+    }
+
+    /** Follows the finger, pulled onto the dismiss target when close enough. */
+    private fun dragTo(v: View, raw: BubblePosition) {
+        val placement = dismissZone?.place(raw, sizePx) ?: DragPlacement(raw, isOverTarget = false)
+        if (placement.isOverTarget != isOverTarget) {
+            isOverTarget = placement.isOverTarget
+            dismissTarget.setEngaged(isOverTarget)
+            if (isOverTarget) v.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+        }
+        move(v, placement.position.x, placement.position.y)
+    }
+
+    private fun release(v: View) {
+        endDrag()
+        snap(v)
+    }
+
+    /** Same as turning the car mode switch off; the bubble goes back to where the drag started. */
+    private fun dismiss(v: View, restore: BubblePosition) {
+        v.performHapticFeedback(HapticFeedbackConstants.CONFIRM)
+        endDrag()
+        isDismissed = true
+        hasStoppedSinceDismiss = state == VoiceState.STOPPED
+        updateVisibility.run()
+        move(v, restore.x, restore.y)
+        VoiceLauncher.stop(service)
+    }
+
+    private fun endDrag() {
+        dismissZone = null
+        isOverTarget = false
+        dismissTarget.hide()
     }
 
     private fun snap(v: View) {

@@ -4,27 +4,41 @@ import android.content.Context
 import android.util.Log
 import com.pupus.phone.api.DeviceToken
 import com.pupus.phone.api.InterfaceAddress
+import com.pupus.phone.api.TokenStore
 import com.pupus.phone.voice.DictationConfig
 import com.pupus.phone.voice.RecognizerMode
 import java.net.Inet4Address
 import java.net.NetworkInterface
 import java.net.SocketException
 
-/** SharedPreferences-backed settings. The device token is generated once on first access. */
+/** SharedPreferences-backed settings. The device token is generated on first access and can be rotated. */
 class AppSettings(context: Context) {
     private val prefs = context.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
 
-    /** Process-wide lock: every AppSettings instance must agree on a single generated token. */
+    private val tokenStore = object : TokenStore {
+        override fun read(): String? = prefs.getString(KEY_DEVICE_TOKEN, null)
+
+        // commit(), not apply(): the PC side must never be told a token that is not on disk.
+        override fun write(token: String): Boolean = prefs.edit().putString(KEY_DEVICE_TOKEN, token).commit()
+    }
+
+    /**
+     * Read on every device API request, so a rotation applies at once. Process-wide lock:
+     * every AppSettings instance must agree on a single generated token.
+     */
     val deviceToken: String
         get() = synchronized(TOKEN_LOCK) {
-            val existing = prefs.getString(KEY_DEVICE_TOKEN, null)
-            if (existing != null && DeviceToken.isValidFormat(existing)) return existing
-            val created = DeviceToken.generate()
-            if (!prefs.edit().putString(KEY_DEVICE_TOKEN, created).commit()) {
-                Log.e(TAG, "Device token could not be persisted; it will change on next start")
-            }
-            created
+            val result = DeviceToken.getOrCreate(tokenStore)
+            if (!result.isStored) Log.e(TAG, "Device token could not be persisted; it will change on next start")
+            result.token
         }
+
+    /** "Regenerar token": the old token stops working immediately. False if it was not persisted. */
+    fun regenerateDeviceToken(): Boolean = synchronized(TOKEN_LOCK) {
+        val result = DeviceToken.rotate(tokenStore)
+        if (!result.isStored) Log.e(TAG, "Rotated device token could not be persisted")
+        result.isStored
+    }
 
     var bridgeUrl: String
         get() = prefs.getString(KEY_BRIDGE_URL, "") ?: ""
