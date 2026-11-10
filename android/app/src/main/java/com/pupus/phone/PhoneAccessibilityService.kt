@@ -2,11 +2,13 @@ package com.pupus.phone
 
 import android.accessibilityservice.AccessibilityService
 import android.content.Intent
+import android.view.inputmethod.InputMethodManager
 import android.util.Log
 import android.view.accessibility.AccessibilityEvent
 import com.pupus.phone.api.DeviceApiHost
 import com.pupus.phone.api.RouteHandler
 import com.pupus.phone.device.AndroidDeviceController
+import com.pupus.phone.ui.BubbleSizePolicy
 import com.pupus.phone.ui.OverlayButton
 import com.pupus.phone.voice.AudioCues
 
@@ -14,6 +16,8 @@ import com.pupus.phone.voice.AudioCues
 class PhoneAccessibilityService : AccessibilityService() {
     private var apiHost: DeviceApiHost? = null
     private var overlay: OverlayButton? = null
+    private var launchers: Set<String> = emptySet()
+    private var ignoredWindows: Set<String> = emptySet()
 
     override fun onServiceConnected() {
         super.onServiceConnected()
@@ -22,6 +26,21 @@ class PhoneAccessibilityService : AccessibilityService() {
         AppSettings(this).isA11yWanted = true
         startServer()
         overlay = OverlayButton(this).also { it.show() }
+        loadWindowPackages()
+        rootInActiveWindow?.packageName?.let { onForeground(it.toString()) }
+    }
+
+    /** Home screens end "showing"; our windows, System UI and keyboards are not an app in front. */
+    private fun loadWindowPackages() {
+        val home = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME)
+        launchers = packageManager.queryIntentActivities(home, 0).map { it.activityInfo.packageName }.toSet()
+        val keyboards = getSystemService(InputMethodManager::class.java)?.enabledInputMethodList.orEmpty().map { it.packageName }
+        ignoredWindows = setOf(packageName, SYSTEM_UI) + keyboards
+    }
+
+    private fun onForeground(pkg: String) {
+        if (!BubbleSizePolicy.isForegroundApp(pkg, ignoredWindows)) return
+        overlay?.onForegroundApp(pkg, pkg in launchers)
     }
 
     private fun startServer() {
@@ -39,7 +58,10 @@ class PhoneAccessibilityService : AccessibilityService() {
     val isApiListening: Boolean
         get() = apiHost?.isListening == true
 
-    override fun onAccessibilityEvent(event: AccessibilityEvent?) = Unit
+    override fun onAccessibilityEvent(event: AccessibilityEvent?) {
+        if (event?.eventType != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) return
+        event.packageName?.let { onForeground(it.toString()) }
+    }
 
     override fun onInterrupt() = Unit
 
@@ -66,6 +88,7 @@ class PhoneAccessibilityService : AccessibilityService() {
 
     companion object {
         private const val TAG = "PupusA11y"
+        private const val SYSTEM_UI = "com.android.systemui"
 
         @Volatile
         var instance: PhoneAccessibilityService? = null

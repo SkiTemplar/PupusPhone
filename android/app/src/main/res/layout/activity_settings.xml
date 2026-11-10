@@ -114,6 +114,15 @@
                     android:layout_marginTop="12dp"
                     android:text="@string/termux_setup" />
                 <TextView style="@style/HelpText" android:text="@string/termux_setup_help" />
+                <TextView style="@style/FieldLabel" android:paddingTop="16dp" android:text="@string/navigation_apps" />
+                <EditText
+                    android:id="@+id/navigationAppsInput"
+                    style="@style/SettingsInput"
+                    android:fontFamily="monospace"
+                    android:importantForAutofill="no"
+                    android:inputType="textUri|textMultiLine"
+                    android:textSize="14sp" />
+                <TextView style="@style/HelpText" android:text="@string/navigation_apps_help" />
                 <Button android:id="@+id/saveButton" style="@style/PrimaryButton" android:layout_marginTop="16dp" android:text="@string/save" />
 
                 <TextView style="@style/FieldLabel" android:paddingTop="24dp" android:text="@string/device_token" />

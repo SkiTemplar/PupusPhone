@@ -27,11 +27,13 @@ import com.pupus.phone.voice.VoiceService
 class TermuxSettingsPanel(private val activity: Activity, private val settings: AppSettings) {
     private val launcher = TermuxLauncher(activity)
     private val pathInput: EditText = activity.findViewById(R.id.termuxPathInput)
+    private val navigationInput: EditText = activity.findViewById(R.id.navigationAppsInput)
     private val statusText: TextView = activity.findViewById(R.id.termuxStatusText)
     private val permissionButton: Button = activity.findViewById(R.id.termuxPermissionButton)
 
     fun bind() {
         pathInput.setText(settings.termuxScriptPath)
+        navigationInput.setText(settings.navigationPackages)
         activity.findViewById<Switch>(R.id.termuxSwitch).apply {
             isChecked = settings.isTermuxLaunchEnabled
             setOnCheckedChangeListener { _, isChecked ->
@@ -74,10 +76,12 @@ class TermuxSettingsPanel(private val activity: Activity, private val settings: 
         Toast.makeText(activity, R.string.termux_setup_copied, Toast.LENGTH_LONG).show()
     }
 
-    /** Saved together with the bridge URL by "Guardar". */
+    /** Saved together with the bridge URL by "Guardar" (the navigation apps of the car-mode bubble too). */
     fun save() {
         settings.termuxScriptPath = pathInput.text.toString()
         pathInput.setText(settings.termuxScriptPath)
+        settings.navigationPackages = navigationInput.text.toString()
+        navigationInput.setText(settings.navigationPackages)
     }
 
     fun render() {

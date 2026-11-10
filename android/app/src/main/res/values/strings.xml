@@ -71,6 +71,14 @@
     <string name="termux_setup_help">Copia una orden con tus tokens y pone la URL del bridge en ws://127.0.0.1:8766/voice. 1) Abre Termux (de F-Droid o GitHub, no de Google Play), mantén pulsado, Pegar e Intro. 2) Al terminar, escribe claude, inicia sesión y sal con /exit. 3) Vuelve aquí, concede el permiso de Termux y activa el modo coche. La orden se puede repetir para actualizar.</string>
     <string name="termux_setup_copied">Orden copiada: pégala en Termux</string>
     <string name="termux_setup_failed">No se pudo preparar la orden: el token del dispositivo no es válido</string>
+    <string name="car_action_talk">Hablar</string>
+    <string name="car_action_send">Enviar</string>
+    <string name="car_action_interrupt">Interrumpir</string>
+    <string name="car_row_state">Estado</string>
+    <string name="car_row_reply">Última respuesta</string>
+    <string name="car_no_reply">Todavía no hay respuesta</string>
+    <string name="navigation_apps">Apps de navegación</string>
+    <string name="navigation_apps_help">En modo coche el botón flotante es grande; sobre estas apps vuelve a ser pequeño para no tapar el mapa. Nombres de paquete separados por comas.</string>
     <string name="termux_script_path">Script de arranque en Termux</string>
     <string name="termux_grant_permission">Conceder permiso de Termux</string>
     <string name="termux_status_disabled">Arranque automático desactivado</string>

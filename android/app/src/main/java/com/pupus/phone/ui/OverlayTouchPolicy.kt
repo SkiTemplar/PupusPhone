@@ -3,7 +3,6 @@ package com.pupus.phone.ui
 import android.os.Handler
 import android.os.Looper
 import android.view.MotionEvent
-import com.pupus.phone.voice.VoiceState
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
@@ -12,15 +11,15 @@ import java.util.concurrent.atomic.AtomicInteger
  * When the push-to-talk bubble may take touches. The bubble floats above every app, so a tap
  * the assistant injects with dispatchGesture at the same spot would land on it and start a new
  * listening turn (interrupting the running one). Hence:
- * - no touches while a turn is running (THINKING, SPEAKING) or a device API gesture is in flight;
+ * - no touches while a device API gesture is in flight (the window steps aside for each one);
  * - only touches from a real finger or stylus on the touchscreen.
+ * A real finger may still tap while THINKING or SPEAKING: that interrupts the turn (cancel).
  */
 object OverlayTouchPolicy {
     /** MotionEvent flag set by the input dispatcher on events injected by accessibility (hidden in the SDK). */
     const val FLAG_IS_ACCESSIBILITY_EVENT = 0x800
 
-    fun acceptsTouches(state: VoiceState, gesturesInFlight: Int): Boolean =
-        gesturesInFlight <= 0 && state != VoiceState.THINKING && state != VoiceState.SPEAKING
+    fun acceptsTouches(gesturesInFlight: Int): Boolean = gesturesInFlight <= 0
 
     /**
      * Injected gestures come with device id 0 (or the virtual device, -1) and, from Android 12,

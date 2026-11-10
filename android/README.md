@@ -109,12 +109,22 @@ el TTS, envía `cancel` y escucha. Un toque mientras escucha cancela la escucha.
 - **Respuesta silenciosa:** un `done` con `silent: true` (el modelo respondió
   `[ok]`) no habla ni pide foco; como mucho suena el tono de fin («Tono al
   terminar sin respuesta hablada», activado por defecto).
-- **Burbuja flotante:** no recibe toques mientras el turno está en THINKING o
-  SPEAKING ni durante cada gesto de la device API (`FLAG_NOT_TOUCHABLE`), y
-  descarta toques que no vengan de un dedo real (device id ≤ 0 o
-  `FLAG_IS_ACCESSIBILITY_EVENT`). Así los toques que inyecta Claude no la
-  activan; para interrumpir un turno, toca el botón de la app. Con TalkBack
-  activo los toques llegan inyectados por accesibilidad y la burbuja los ignora.
+- **Burbuja flotante:** no recibe toques durante cada gesto de la device API
+  (`FLAG_NOT_TOUCHABLE` mientras dura, con 150 ms de margen) y descarta los toques
+  que no vengan de un dedo real (device id ≤ 0 o `FLAG_IS_ACCESSIBILITY_EVENT`).
+  Así los toques que inyecta Claude no la activan, pero un toque de dedo en
+  THINKING o SPEAKING interrumpe el turno (`cancel`). Con TalkBack activo los
+  toques llegan inyectados por accesibilidad y la burbuja los ignora.
+- **Tamaño de la burbuja en modo coche:** grande (círculo de 150 dp) para
+  acertar conduciendo; pequeña (72 dp) sin modo coche, sobre una app de
+  navegación (Ajustes → «Apps de navegación»; por defecto Google Maps y Waze) o
+  mientras el asistente enseña algo que acaba de abrir. «Enseñando» se deduce en
+  el móvil, sin cambiar el bridge: un turno que habló (no fue `silent`) y durante
+  el cual pasó al primer plano una app que no es el launcher. Dura hasta que se
+  vuelve al inicio o pasan 5 minutos. El primer plano sale de
+  `TYPE_WINDOW_STATE_CHANGED`, sin contar PupusPhone, System UI ni teclados. El
+  cambio se anima conservando el borde y la altura del centro, siempre dentro de
+  la pantalla (`BubbleSizePolicy`, `ShowingTracker`, `BubbleResize`).
 
 Reconexión al bridge con backoff exponencial (1-30 s) que solo se reinicia al
 recibir `ready`; un cierre 1008 o un 401/403 en el handshake (token del bridge
@@ -189,6 +199,38 @@ pasar lo mismo.
   adb para copiar), device API escuchando, bridge conectado, Termux y su permiso, el permiso de
   autorreparación, optimización de batería (con botón para quitarla), el consejo de Xiaomi y
   «Reparar ahora».
+
+## Android Auto
+
+`car/PupusCarAppService` (Car App Library, `androidx.car.app:app`) muestra en la
+pantalla del coche un `PaneTemplate` con el estado (Listo, Escuchando, Pensando,
+Hablando), la última respuesta y un botón «Hablar» que hace lo mismo que tocar la
+burbuja (`VoiceLauncher.tap`: hablar, enviar o interrumpir según el estado). Las
+dos filas mantienen el título para que cada cambio cuente como refresco de la
+misma plantilla y no como un paso nuevo de la cuota del host.
+
+Categoría `androidx.car.app.category.IOT`: es la que describe una app que
+controla un dispositivo (aquí, el propio móvil) con plantillas genéricas y sin
+requisitos propios de la categoría (no es navegación, ni POI, ni mensajería con
+notificaciones, ni media). `minCarApiLevel` = 1: solo usa `PaneTemplate`, `Row` y
+`Action`.
+
+Limitación real: Google no publica en Play para Android Auto asistentes de voz
+de terceros ni apps de control del móvil; esta app solo funciona instalada a mano
+y con el modo desarrollador de Android Auto. Pasos en tu coche:
+
+1. En el móvil, Ajustes → Android Auto (o la app Android Auto) → bajar hasta
+   «Versión» y tocarla 10 veces → aceptar el modo desarrollador.
+2. Menú ⋮ → «Ajustes de desarrollador» → activar «Fuentes desconocidas».
+3. Conectar al coche (o reconectar): PupusPhone aparece en el lanzador de
+   Android Auto.
+4. Encender el modo coche en el móvil antes de usarla: el botón reutiliza el
+   `VoiceService` que ya corre. Si no está en marcha, el servicio de micrófono se
+   intenta arrancar desde segundo plano y Android puede rechazarlo (el estado
+   pasa a «Modo coche apagado» con el error).
+
+El build debug acepta cualquier host; el release, solo los de la lista de la
+librería (`hosts_allowlist_sample`: Android Auto y el Desktop Head Unit).
 
 ## Limitaciones conocidas
 

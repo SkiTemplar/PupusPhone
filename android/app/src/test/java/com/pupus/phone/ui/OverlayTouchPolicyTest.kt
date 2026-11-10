@@ -1,30 +1,26 @@
 package com.pupus.phone.ui
 
 import android.view.MotionEvent
-import com.pupus.phone.voice.VoiceState
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class OverlayTouchPolicyTest {
     @Test
-    fun bubbleIgnoresTouchesWhileATurnIsRunning() {
-        assertFalse(OverlayTouchPolicy.acceptsTouches(VoiceState.THINKING, gesturesInFlight = 0))
-        assertFalse(OverlayTouchPolicy.acceptsTouches(VoiceState.SPEAKING, gesturesInFlight = 0))
+    fun aRealTapMayInterruptARunningTurn() {
+        // THINKING and SPEAKING take touches again: a finger tap cancels the turn (VoiceService.onTap).
+        assertTrue(OverlayTouchPolicy.acceptsTouches(gesturesInFlight = 0))
     }
 
     @Test
     fun bubbleIgnoresTouchesDuringAnyDeviceApiGesture() {
-        VoiceState.entries.forEach { state ->
-            assertFalse("$state", OverlayTouchPolicy.acceptsTouches(state, gesturesInFlight = 1))
-        }
+        assertFalse(OverlayTouchPolicy.acceptsTouches(gesturesInFlight = 1))
+        assertFalse(OverlayTouchPolicy.acceptsTouches(gesturesInFlight = 3))
     }
 
     @Test
-    fun bubbleTakesTouchesOtherwise() {
-        listOf(VoiceState.STOPPED, VoiceState.IDLE, VoiceState.LISTENING).forEach { state ->
-            assertTrue("$state", OverlayTouchPolicy.acceptsTouches(state, gesturesInFlight = 0))
-        }
+    fun anUnbalancedReleaseNeverLocksTheBubble() {
+        assertTrue(OverlayTouchPolicy.acceptsTouches(gesturesInFlight = -1))
     }
 
     @Test

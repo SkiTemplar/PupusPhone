@@ -5,6 +5,7 @@ import android.util.Log
 import com.pupus.phone.api.DeviceToken
 import com.pupus.phone.api.InterfaceAddress
 import com.pupus.phone.api.TokenStore
+import com.pupus.phone.ui.BubbleSizePolicy
 import com.pupus.phone.voice.DictationConfig
 import com.pupus.phone.voice.RecognizerMode
 import com.pupus.phone.voice.TermuxRunCommand
@@ -93,6 +94,11 @@ class AppSettings(context: Context) {
         set(value) = prefs.edit().putBoolean(KEY_A11Y_WANTED, value).apply()
 
     /** Script that Termux runs through RUN_COMMAND; blank falls back to the default path. */
+    /** Apps over which the car-mode bubble stays small (it would cover the map). Comma separated. */
+    var navigationPackages: String
+        get() = prefs.getString(KEY_NAVIGATION_APPS, null) ?: BubbleSizePolicy.DEFAULT_NAVIGATION_PACKAGES.joinToString(", ")
+        set(value) = prefs.edit().putString(KEY_NAVIGATION_APPS, BubbleSizePolicy.parsePackages(value).joinToString(", ")).apply()
+
     var termuxScriptPath: String
         get() = prefs.getString(KEY_TERMUX_SCRIPT, null)?.takeIf { it.isNotBlank() } ?: TermuxRunCommand.DEFAULT_SCRIPT_PATH
         set(value) = prefs.edit().putString(KEY_TERMUX_SCRIPT, value.trim()).apply()
@@ -112,6 +118,7 @@ class AppSettings(context: Context) {
         const val KEY_TTS_VOLUME = "tts_volume_percent"
         const val KEY_MIN_MEDIA = "min_media_volume_percent"
         const val KEY_SILENT_TONE = "silent_done_tone"
+        const val KEY_NAVIGATION_APPS = "navigation_packages"
         val TOKEN_LOCK = Any()
     }
 }
