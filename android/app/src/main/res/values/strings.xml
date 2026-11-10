@@ -30,6 +30,13 @@
     <string name="car_mode">Modo coche</string>
     <string name="settings">Ajustes</string>
     <string name="new_conversation">Nueva conversación</string>
+    <string name="show_all">Ver todo ›</string>
+    <string name="show_conversation">Ver la conversación completa</string>
+    <string name="conversation_title">Conversación</string>
+    <string name="conversation_empty">Todavía no hay nada en esta conversación. Toca el botón y habla.</string>
+    <string name="conversation_you">Tú</string>
+    <string name="conversation_assistant">Asistente</string>
+    <string name="conversation_waiting">…</string>
     <string name="bridge_url">URL del bridge</string>
     <string name="bridge_url_hint">ws://100.64.0.1:8766/voice</string>
     <string name="bridge_token">Token del bridge</string>

@@ -34,7 +34,17 @@ object VoiceBus {
         fun onDetails(isBridgeConnected: Boolean, reply: String)
     }
 
+    /** History of the current conversation (user turns and full replies). */
+    fun interface HistoryListener {
+        fun onHistory(history: ConversationHistory)
+    }
+
     private val main = Handler(Looper.getMainLooper())
+    private val historyListeners = CopyOnWriteArrayList<HistoryListener>()
+
+    @Volatile
+    var history: ConversationHistory = ConversationHistory()
+        private set
     private val levelListeners = CopyOnWriteArrayList<LevelListener>()
     private val detailsListeners = CopyOnWriteArrayList<DetailsListener>()
 
@@ -120,6 +130,24 @@ object VoiceBus {
     fun publishReply(text: String) {
         reply = text
         publishDetails()
+    }
+
+    fun addHistoryListener(listener: HistoryListener) {
+        historyListeners.add(listener)
+        listener.onHistory(history)
+    }
+
+    fun removeHistoryListener(listener: HistoryListener) {
+        historyListeners.remove(listener)
+    }
+
+    /** Applies [transform] to the history and notifies listeners if it changed. */
+    @Synchronized
+    fun updateHistory(transform: (ConversationHistory) -> ConversationHistory) {
+        val updated = transform(history)
+        if (updated === history) return
+        history = updated
+        main.post { historyListeners.forEach { it.onHistory(updated) } }
     }
 
     private fun publishDetails() {

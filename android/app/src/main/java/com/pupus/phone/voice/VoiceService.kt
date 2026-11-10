@@ -147,6 +147,7 @@ class VoiceService : Service(), BridgeClient.Listener, SpeechInput.Callback {
         abortTurn(isNewConversation = true)
         VoiceBus.publishTranscript("")
         VoiceBus.publishReply("")
+        VoiceBus.updateHistory { it.reset() }
         if (pending.requestReset(bridge.isConnected())) sendReset()
         val status = if (pending.isResetPending) R.string.status_reset_pending else R.string.status_new_conversation
         VoiceBus.publish(VoiceState.IDLE, getString(status))
@@ -200,6 +201,7 @@ class VoiceService : Service(), BridgeClient.Listener, SpeechInput.Callback {
             return
         }
         turn.begin(id)
+        VoiceBus.updateHistory { it.appendUtterance(id, text) }
         VoiceBus.publish(VoiceState.THINKING, "«$text»")
     }
 
@@ -250,7 +252,7 @@ class VoiceService : Service(), BridgeClient.Listener, SpeechInput.Callback {
         when (message) {
             is BridgeMessage.Ready -> VoiceBus.publishStatus(getString(R.string.status_ready, message.model))
             is BridgeMessage.Say -> if (turn.isCurrent(message.id)) onSay(message.id, message.text)
-            is BridgeMessage.Status -> if (turn.isCurrent(message.id)) VoiceBus.publishStatus(message.text)
+            is BridgeMessage.Status -> if (turn.isCurrent(message.id)) onStatus(message.id, message.text)
             is BridgeMessage.Done -> if (turn.isCurrent(message.id)) finishWhenSilent()
             is BridgeMessage.Error -> onBridgeError(message)
             is BridgeMessage.Invalid -> Log.w(TAG, "Ignoring invalid frame: ${message.reason}")
@@ -260,11 +262,18 @@ class VoiceService : Service(), BridgeClient.Listener, SpeechInput.Callback {
     /** Speaks a `say` frame and shows the whole reply of the turn on screen. */
     private fun onSay(id: String, text: String) {
         VoiceBus.publishReply(turn.appendReply(id, text, VoiceBus.reply))
+        VoiceBus.updateHistory { it.appendSay(id, text) }
         speak(text)
+    }
+
+    private fun onStatus(id: String, text: String) {
+        VoiceBus.updateHistory { it.appendStatus(id, text) }
+        VoiceBus.publishStatus(text)
     }
 
     private fun onBridgeError(message: BridgeMessage.Error) {
         if (message.id != null && !turn.isCurrent(message.id)) return
+        message.id?.let { id -> VoiceBus.updateHistory { it.appendStatus(id, message.message) } }
         speakLocal(message.message)
     }
 
@@ -307,7 +316,7 @@ class VoiceService : Service(), BridgeClient.Listener, SpeechInput.Callback {
         return Notification.Builder(this, CHANNEL_ID)
             .setContentTitle(getString(R.string.notification_title))
             .setContentText(getString(R.string.notification_text))
-            .setSmallIcon(android.R.drawable.ic_btn_speak_now)
+            .setSmallIcon(R.drawable.ic_stat_pupus)
             .setContentIntent(open)
             .setOngoing(true)
             .build()

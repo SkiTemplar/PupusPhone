@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Adaptive icon foreground: white phone with a microphone "cut" into its screen
+  and two sound waves. The microphone is painted with the background gradient
+  (same coordinates) so it reads as negative space. Fits the 66dp safe zone.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Soft shadow under the phone. -->
+    <path
+        android:fillColor="#33000000"
+        android:pathData="M40,30h12a7,7 0,0 1,7 7v38a7,7 0,0 1,-7 7h-12a7,7 0,0 1,-7 -7v-38a7,7 0,0 1,7 -7z" />
+    <!-- Phone body. -->
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M39,28h12a7,7 0,0 1,7 7v38a7,7 0,0 1,-7 7h-12a7,7 0,0 1,-7 -7v-38a7,7 0,0 1,7 -7z" />
+    <!-- Microphone capsule. -->
+    <path android:pathData="M45,40a4.5,4.5 0,0 1,4.5 4.5v8a4.5,4.5 0,0 1,-9 0v-8a4.5,4.5 0,0 1,4.5 -4.5z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:endX="108"
+                android:endY="108"
+                android:startX="0"
+                android:startY="0"
+                android:type="linear">
+                <item android:color="#FF1B1650" android:offset="0.15" />
+                <item android:color="#FF4A7FEA" android:offset="0.5" />
+                <item android:color="#FF8A5CF6" android:offset="0.88" />
+            </gradient>
+        </aapt:attr>
+    </path>
+    <!-- Microphone cradle, stem and base. -->
+    <path
+        android:pathData="M37,51v1a8,8 0,0 0,16 0v-1M45,60v5M41,65h8"
+        android:strokeWidth="3"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round">
+        <aapt:attr name="android:strokeColor">
+            <gradient
+                android:endX="108"
+                android:endY="108"
+                android:startX="0"
+                android:startY="0"
+                android:type="linear">
+                <item android:color="#FF1B1650" android:offset="0.15" />
+                <item android:color="#FF4A7FEA" android:offset="0.5" />
+                <item android:color="#FF8A5CF6" android:offset="0.88" />
+            </gradient>
+        </aapt:attr>
+    </path>
+    <!-- Sound waves, centred on the microphone height. -->
+    <path
+        android:pathData="M63.47,45.97a14,14 0,0 1,0 16.06M70.84,40.81a23,23 0,0 1,0 26.38"
+        android:strokeColor="#FFFFFFFF"
+        android:strokeWidth="4.5"
+        android:strokeLineCap="round" />
+</vector>

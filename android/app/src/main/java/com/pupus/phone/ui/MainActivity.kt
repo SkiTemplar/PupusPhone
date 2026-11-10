@@ -19,6 +19,7 @@ class MainActivity : Activity() {
     private lateinit var stateText: TextView
     private lateinit var transcriptText: TextView
     private lateinit var replyText: TextView
+    private lateinit var showAllText: TextView
     private lateinit var statusText: TextView
     private lateinit var a11yChip: TextView
     private lateinit var bridgeChip: TextView
@@ -42,6 +43,9 @@ class MainActivity : Activity() {
         replyText.text = reply
         render()
     }
+    private val historyListener = VoiceBus.HistoryListener { history ->
+        showAllText.visibility = if (history.isEmpty) View.INVISIBLE else View.VISIBLE
+    }
     private val levelListener = VoiceBus.LevelListener { rmsDb -> circle.setLevel(rmsDb) }
 
     /** The accessibility service binds asynchronously (e.g. after an update): poll while visible. */
@@ -59,6 +63,7 @@ class MainActivity : Activity() {
         stateText = findViewById(R.id.stateText)
         transcriptText = findViewById(R.id.transcriptText)
         replyText = findViewById(R.id.replyText)
+        showAllText = findViewById(R.id.showAllText)
         statusText = findViewById(R.id.statusText)
         a11yChip = findViewById(R.id.a11yChip)
         bridgeChip = findViewById(R.id.bridgeChip)
@@ -76,6 +81,7 @@ class MainActivity : Activity() {
         VoiceBus.addTranscriptListener(transcriptListener)
         VoiceBus.addDetailsListener(detailsListener)
         VoiceBus.addLevelListener(levelListener)
+        VoiceBus.addHistoryListener(historyListener)
         a11yPoll.run()
     }
 
@@ -85,6 +91,7 @@ class MainActivity : Activity() {
         VoiceBus.removeTranscriptListener(transcriptListener)
         VoiceBus.removeDetailsListener(detailsListener)
         VoiceBus.removeLevelListener(levelListener)
+        VoiceBus.removeHistoryListener(historyListener)
         a11yChip.removeCallbacks(a11yPoll)
         super.onPause()
     }
@@ -103,6 +110,9 @@ class MainActivity : Activity() {
         }
         findViewById<View>(R.id.settingsButton).setOnClickListener {
             startActivity(Intent(this, SettingsActivity::class.java))
+        }
+        findViewById<View>(R.id.replyCard).setOnClickListener {
+            startActivity(Intent(this, ConversationActivity::class.java))
         }
         findViewById<View>(R.id.resetButton).setOnClickListener { VoiceLauncher.reset(this) }
     }
