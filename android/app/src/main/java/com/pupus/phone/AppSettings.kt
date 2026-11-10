@@ -68,6 +68,14 @@ class AppSettings(context: Context) {
         get() = prefs.getBoolean(KEY_TERMUX_LAUNCH, true)
         set(value) = prefs.edit().putBoolean(KEY_TERMUX_LAUNCH, value).apply()
 
+    /**
+     * True while the user wants the accessibility service: set on connect, cleared on a clean
+     * unbind (switched off in Settings). A process kill skips onUnbind, so it stays true.
+     */
+    var isA11yWanted: Boolean
+        get() = prefs.getBoolean(KEY_A11Y_WANTED, true)
+        set(value) = prefs.edit().putBoolean(KEY_A11Y_WANTED, value).apply()
+
     /** Script that Termux runs through RUN_COMMAND; blank falls back to the default path. */
     var termuxScriptPath: String
         get() = prefs.getString(KEY_TERMUX_SCRIPT, null)?.takeIf { it.isNotBlank() } ?: TermuxRunCommand.DEFAULT_SCRIPT_PATH
@@ -83,6 +91,7 @@ class AppSettings(context: Context) {
         const val KEY_PAUSE_MS = "pause_to_send_ms"
         const val KEY_RECOGNIZER = "recognizer_mode"
         const val KEY_TERMUX_LAUNCH = "termux_launch"
+        const val KEY_A11Y_WANTED = "a11y_wanted"
         const val KEY_TERMUX_SCRIPT = "termux_script_path"
         val TOKEN_LOCK = Any()
     }

@@ -33,6 +33,10 @@ class DeviceApiHost(
         override fun onLinkPropertiesChanged(network: Network, linkProperties: LinkProperties) = scheduleRebind()
     }
 
+    /** At least one address is bound. Main thread. */
+    val isListening: Boolean
+        get() = servers.isNotEmpty()
+
     fun start() {
         if (isRunning) return
         isRunning = true

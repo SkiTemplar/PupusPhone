@@ -113,4 +113,29 @@
 
     <string name="allow_lan">Permitir red local</string>
     <string name="allow_lan_warning">Aviso: con esto activado, la device API también escucha en la IP de la wifi. Va en HTTP sin cifrar: cualquiera en esa red puede intentar conectarse y capturar el token en tránsito. Déjalo apagado y usa Tailscale salvo que confíes en la red.</string>
+    <!-- Estado (diagnóstico) -->
+    <string name="group_status">Estado</string>
+    <string name="diag_a11y_running">Accesibilidad: activa</string>
+    <string name="diag_a11y_repaired">Accesibilidad: caída — reparada (reconectando…)</string>
+    <string name="diag_a11y_no_permission">Accesibilidad: caída — sin permiso para repararla</string>
+    <string name="diag_a11y_off">Accesibilidad: desactivada en Ajustes</string>
+    <string name="diag_a11y_dead">Accesibilidad: caída — pulsa «Reparar ahora»</string>
+    <string name="diag_api_on">Device API: escuchando en el puerto 8765</string>
+    <string name="diag_api_off">Device API: sin escuchar</string>
+    <string name="diag_bridge_on">Bridge: conectado</string>
+    <string name="diag_bridge_off">Bridge: desconectado</string>
+    <string name="diag_termux_ok">Termux: instalado, permiso RUN_COMMAND concedido</string>
+    <string name="diag_termux_no_permission">Termux: instalado, falta el permiso RUN_COMMAND</string>
+    <string name="diag_termux_missing">Termux: no instalado</string>
+    <string name="diag_secure_on">Autorreparación: WRITE_SECURE_SETTINGS concedido</string>
+    <string name="diag_secure_off">Autorreparación: falta WRITE_SECURE_SETTINGS</string>
+    <string name="diag_grant_help">Concédelo una vez desde el PC con el móvil conectado por USB:</string>
+    <string name="diag_copy_command">Copiar comando</string>
+    <string name="diag_battery_on">Batería: sin optimización</string>
+    <string name="diag_battery_off">Batería: optimizada (Android puede cerrar la app)</string>
+    <string name="diag_battery_request">Quitar la optimización de batería</string>
+    <string name="diag_xiaomi_tip">Xiaomi/HyperOS: bloquea PupusPhone y Termux en recientes (mantén pulsada la tarjeta → candado) y activa el inicio automático de ambas. Si deslizas la app fuera de recientes, HyperOS la cierra y Android no vuelve a activar la accesibilidad.</string>
+    <string name="diag_repair">Reparar ahora</string>
+    <string name="diag_repair_done">Reparación enviada: la accesibilidad vuelve en unos segundos</string>
+    <string name="diag_repair_not_needed">La accesibilidad ya está activa</string>
 </resources>

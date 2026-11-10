@@ -32,6 +32,16 @@ import com.pupus.phone.voice.VoiceUrl
 class SettingsActivity : Activity() {
     private lateinit var settings: AppSettings
     private lateinit var termuxPanel: TermuxSettingsPanel
+    private lateinit var diagnostics: DiagnosticsPanel
+    private lateinit var statusCard: View
+
+    /** The accessibility rebind and the bridge connection are asynchronous: refresh "Estado" while visible. */
+    private val statusPoll = object : Runnable {
+        override fun run() {
+            diagnostics.render()
+            statusCard.postDelayed(this, STATUS_POLL_MS)
+        }
+    }
     private var isTokenShown = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -42,6 +52,8 @@ class SettingsActivity : Activity() {
         settings = AppSettings(this)
         findViewById<View>(R.id.backButton).setOnClickListener { finish() }
         termuxPanel = TermuxSettingsPanel(this, settings).apply { bind() }
+        diagnostics = DiagnosticsPanel(this).apply { bind() }
+        statusCard = findViewById(R.id.diagA11yText)
         bindConnection()
         VoiceSettingsPanel(this, settings).bind()
         bindLanSwitch()
@@ -52,14 +64,19 @@ class SettingsActivity : Activity() {
         super.onResume()
         AppForeground.onResume()
         refreshInfo()
+        statusPoll.run()
     }
 
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        if (requestCode == TermuxSettingsPanel.TERMUX_PERMISSION_REQUEST) termuxPanel.render()
+        if (requestCode == TermuxSettingsPanel.TERMUX_PERMISSION_REQUEST) {
+            termuxPanel.render()
+            diagnostics.render()
+        }
     }
 
     override fun onPause() {
+        statusCard.removeCallbacks(statusPoll)
         AppForeground.onPause()
         super.onPause()
     }
@@ -170,6 +187,7 @@ class SettingsActivity : Activity() {
 
     private companion object {
         const val TAG = "PupusSettings"
+        const val STATUS_POLL_MS = 2_000L
     }
 }
 

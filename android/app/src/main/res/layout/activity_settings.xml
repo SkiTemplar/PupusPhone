@@ -42,8 +42,36 @@
             android:paddingEnd="16dp"
             android:paddingBottom="32dp">
 
+            <!-- Estado -->
+            <TextView style="@style/GroupTitle" android:paddingTop="8dp" android:text="@string/group_status" />
+            <LinearLayout style="@style/Card">
+                <TextView android:id="@+id/diagA11yText" style="@style/BodyText" android:paddingTop="0dp" android:textStyle="bold" />
+                <TextView android:id="@+id/diagApiText" style="@style/BodyText" />
+                <TextView android:id="@+id/diagBridgeText" style="@style/BodyText" />
+                <TextView android:id="@+id/diagTermuxText" style="@style/BodyText" />
+                <TextView android:id="@+id/diagSecureText" style="@style/BodyText" />
+                <LinearLayout
+                    android:id="@+id/diagGrantGroup"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical">
+                    <TextView style="@style/HelpText" android:text="@string/diag_grant_help" />
+                    <TextView
+                        android:id="@+id/diagGrantCommand"
+                        style="@style/BodyText"
+                        android:fontFamily="monospace"
+                        android:textIsSelectable="true"
+                        android:textSize="13sp" />
+                    <Button android:id="@+id/diagCopyGrantButton" style="@style/SecondaryButton" android:text="@string/diag_copy_command" />
+                </LinearLayout>
+                <TextView android:id="@+id/diagBatteryText" style="@style/BodyText" />
+                <Button android:id="@+id/diagBatteryButton" style="@style/SecondaryButton" android:text="@string/diag_battery_request" />
+                <TextView android:id="@+id/diagXiaomiTip" style="@style/HelpText" android:text="@string/diag_xiaomi_tip" android:textColor="@color/warning" />
+                <Button android:id="@+id/diagRepairButton" style="@style/PrimaryButton" android:layout_marginTop="16dp" android:text="@string/diag_repair" />
+            </LinearLayout>
+
             <!-- Conexión -->
-            <TextView style="@style/GroupTitle" android:paddingTop="8dp" android:text="@string/group_connection" />
+            <TextView style="@style/GroupTitle" android:text="@string/group_connection" />
             <LinearLayout style="@style/Card">
                 <TextView style="@style/FieldLabel" android:paddingTop="0dp" android:text="@string/bridge_url" />
                 <EditText

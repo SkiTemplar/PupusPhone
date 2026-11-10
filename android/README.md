@@ -75,7 +75,8 @@ curl -H "Authorization: Bearer <token>" http://<ip-tailscale-movil>:8765/health
 | Operaciones sobre el sistema | `device/AndroidDeviceController.kt`, `Gestures.kt`, `ScreenCapture.kt`, `SystemActions.kt` |
 | Reglas del árbol y nodos obsoletos (puras, testeadas) | `tree/TreeSerializer.kt`, `tree/A11yNode.kt`, `tree/NodeFreshness.kt` |
 | Voz | `voice/VoiceService.kt`, `BridgeClient.kt`, `SpeechIo.kt`, `VoiceMessages.kt`, `VoiceBus.kt`, `ReconnectPolicy.kt`, `UtteranceTracker.kt` |
-| UI | `ui/MainActivity.kt`, `ui/OverlayButton.kt` |
+| UI | `ui/MainActivity.kt`, `ui/OverlayButton.kt`, `ui/DiagnosticsPanel.kt` |
+| Autorreparación de la accesibilidad | `guard/AccessibilityGuard.kt`, `guard/AccessibilityRepairPolicy.kt` (pura, testeada), `guard/GuardBootReceiver.kt`, `PupusApp.kt` |
 
 Interpretaciones del contrato:
 
@@ -141,6 +142,36 @@ bridge escucha (2-5 s).
   la orden y solo lo avisa con su propia notificación: la app no puede
   detectarlo y el chip del bridge sigue en «desconectado».
 - El script tiene que ser ejecutable (`chmod +x`).
+
+## Autorreparación de la accesibilidad (HyperOS)
+
+En Xiaomi/HyperOS (visto en un Xiaomi 15T con HyperOS 3), deslizar PupusPhone fuera de recientes
+mata el proceso (`SwipeUpClean`, `ApplicationExitInfo` motivo 13). Android deja el servicio de
+accesibilidad en «Servicios bloqueados» (*Crashed services*) y no lo vuelve a enlazar: la device API
+y el botón flotante mueren sin aviso hasta que se apaga y enciende el servicio. A Termux le puede
+pasar lo mismo.
+
+- **Permiso, una sola vez por adb**:
+  `adb shell pm grant com.pupus.phone android.permission.WRITE_SECURE_SETTINGS`
+  (declarado en el manifiesto con `tools:ignore="ProtectedPermissions"`). Sobrevive a reinicios y
+  actualizaciones; se pierde al desinstalar.
+- `guard/AccessibilityGuard.kt`: si el servicio está en `ENABLED_ACCESSIBILITY_SERVICES` pero no
+  corre, reescribe el ajuste sin nuestro componente y, un segundo después, con él (conserva los demás
+  servicios) para forzar el enlace; si falta, `ACCESSIBILITY_ENABLED=1` y el usuario no lo apagó a
+  mano (`onUnbind` limpio), lo vuelve a añadir. Se dispara al arrancar el proceso
+  (`PupusApp`, con 5 s de margen), en `MainActivity.onResume`, al arrancar `VoiceService` y con
+  `BOOT_COMPLETED`/`MY_PACKAGE_REPLACED` (`GuardBootReceiver`). Como mucho un intento cada 10 s;
+  todo queda en logcat con la etiqueta `PupusGuard`. La decisión y la manipulación de la cadena
+  están en `AccessibilityRepairPolicy` (pura, con tests).
+- **Watchdog del bridge** (`voice/BridgeWatchdog.kt`, puro y testeado): con el modo coche activo y
+  una URL de bridge local, si el WebSocket lleva más de 15 s sin conectar, vuelve a enviar a Termux
+  el `RUN_COMMAND` de arranque (idempotente), como mucho una vez por minuto.
+- **Bloquear PupusPhone y Termux en recientes**: recientes → mantener pulsada la tarjeta → candado.
+  Además, **inicio automático** activado y batería «Sin restricciones» en las dos apps.
+- **Ajustes → Estado**: accesibilidad (activa / caída — reparada / caída — sin permiso, con el comando
+  adb para copiar), device API escuchando, bridge conectado, Termux y su permiso, el permiso de
+  autorreparación, optimización de batería (con botón para quitarla), el consejo de Xiaomi y
+  «Reparar ahora».
 
 ## Limitaciones conocidas
 

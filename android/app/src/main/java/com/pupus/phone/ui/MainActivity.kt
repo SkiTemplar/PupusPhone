@@ -9,6 +9,7 @@ import android.widget.Switch
 import android.widget.TextView
 import com.pupus.phone.PhoneAccessibilityService
 import com.pupus.phone.R
+import com.pupus.phone.guard.AccessibilityGuard
 import com.pupus.phone.voice.VoiceBus
 import com.pupus.phone.voice.VoiceLauncher
 import com.pupus.phone.voice.VoiceState
@@ -77,6 +78,7 @@ class MainActivity : Activity() {
     override fun onResume() {
         super.onResume()
         AppForeground.onResume()
+        AccessibilityGuard.check(this, "main-resume")
         VoiceBus.addListener(voiceListener)
         VoiceBus.addTranscriptListener(transcriptListener)
         VoiceBus.addDetailsListener(detailsListener)

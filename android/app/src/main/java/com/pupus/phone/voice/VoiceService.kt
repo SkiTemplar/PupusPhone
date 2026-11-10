@@ -7,13 +7,17 @@ import android.app.PendingIntent
 import android.app.Service
 import android.content.Intent
 import android.content.pm.ServiceInfo
+import android.os.Handler
 import android.os.IBinder
+import android.os.Looper
+import android.os.SystemClock
 import android.speech.SpeechRecognizer
 import android.util.Log
 import android.widget.Toast
 import com.pupus.phone.AppSettings
 import com.pupus.phone.BuildConfig
 import com.pupus.phone.R
+import com.pupus.phone.guard.AccessibilityGuard
 import com.pupus.phone.ui.MainActivity
 import java.util.UUID
 
@@ -32,6 +36,14 @@ class VoiceService : Service(), BridgeClient.Listener, SpeechInput.Callback {
     private val pending = PendingRequests()
     private var isForeground = false
     private var isBridgeConfigured = false
+    private val main = Handler(Looper.getMainLooper())
+    private var watchdog = BridgeWatchdog()
+    private val watchdogTick = object : Runnable {
+        override fun run() {
+            checkBridgeWatchdog()
+            main.postDelayed(this, BridgeWatchdog.TICK_MS)
+        }
+    }
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -73,7 +85,10 @@ class VoiceService : Service(), BridgeClient.Listener, SpeechInput.Callback {
         wakeLock.acquire()
         // Car mode is starting: a loopback bridge URL means the bridge lives in Termux on this phone.
         // The script is idempotent and the BridgeClient backoff connects once it is listening.
+        AccessibilityGuard.check(this, "voice-start")
         val termux = TermuxLauncher(this).launchIfNeeded(AppSettings(this))
+        watchdog = BridgeWatchdog().let { if (termux.isSent) it.onLaunched(SystemClock.elapsedRealtime()) else it }
+        main.postDelayed(watchdogTick, BridgeWatchdog.TICK_MS)
         connectBridge()
         VoiceBus.publish(VoiceState.IDLE, termux.message)
         // The status line is soon overwritten by connection updates: a failure also gets a toast.
@@ -91,7 +106,23 @@ class VoiceService : Service(), BridgeClient.Listener, SpeechInput.Callback {
         VoiceBus.publishStatus(getString(R.string.status_connecting))
     }
 
+    /**
+     * Termux may be killed (swiped away on HyperOS) while car mode is on: with a loopback bridge
+     * down for more than 15 s, re-send the idempotent start, at most once per minute.
+     */
+    private fun checkBridgeWatchdog() {
+        val settings = AppSettings(this)
+        val isLoopback = TermuxLaunchPolicy.isLoopbackUrl(settings.bridgeUrl)
+        val step = watchdog.tick(SystemClock.elapsedRealtime(), bridge.isConnected(), isLoopback)
+        watchdog = step.state
+        if (!step.shouldRelaunch) return
+        Log.w(TAG, "Bridge down for more than ${BridgeWatchdog.GRACE_MS / 1000} s: asking Termux to start it again")
+        val result = TermuxLauncher(this).launchIfNeeded(settings)
+        if (!result.isSent) Log.w(TAG, "Watchdog relaunch not sent: ${result.status}")
+    }
+
     override fun onDestroy() {
+        main.removeCallbacks(watchdogTick)
         if (current === this) current = null
         bridge.shutdown()
         input.destroy()
@@ -110,6 +141,7 @@ class VoiceService : Service(), BridgeClient.Listener, SpeechInput.Callback {
     fun stopVoice() {
         if (current === this) current = null
         isForeground = false
+        main.removeCallbacks(watchdogTick)
         pending.clear()
         input.cancel()
         abortTurn()

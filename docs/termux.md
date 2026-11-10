@@ -108,7 +108,33 @@ bash ~/PupusPhone/scripts/termux-start.sh   # idempotent; log in ~/.pupusphone/b
 | Accessibility switch greyed out | Step 3: *Allow restricted settings*. |
 | `ERROR: cannot fast-forward ~/PupusPhone` | You edited files there: `mv ~/PupusPhone ~/PupusPhone.old` and re-run. |
 | Bridge stops after a while | Battery *Unrestricted* and the brand notes above. |
+| Accessibility dies after swiping the app away (Xiaomi) | See *HyperOS kills the app when swiped from recents* below. |
 | Voice says it cannot reach the phone | Device token changed in the app: use *Configurar Termux* again. |
+
+### HyperOS kills the app when swiped from recents
+
+On Xiaomi/HyperOS (seen on a Xiaomi 15T, HyperOS 3) swiping PupusPhone away from recents kills its
+process (`SwipeUpClean`, `ApplicationExitInfo` reason 13). Android then lists the accessibility
+service under *Crashed services* and never rebinds it: the device API (`:8765`) and the floating
+button die silently until the service is switched off and on. Termux (the bridge) can be killed the
+same way.
+
+- **Self-heal, one-time grant.** With the phone on USB debugging, run once on the PC:
+  `adb shell pm grant com.pupus.phone android.permission.WRITE_SECURE_SETTINGS`.
+  The app then rewrites `ENABLED_ACCESSIBILITY_SERVICES` (without its service, then with it,
+  keeping any other services) to force the rebind. It checks on process start, when the app is
+  opened, when car mode starts, after boot and after an update (at most once every 10 s).
+  The grant survives reboots and updates; it is lost if the app is uninstalled.
+- **Bridge watchdog.** In car mode with a loopback bridge URL, if the WebSocket has been down for
+  more than 15 s the app asks Termux to run `termux-start.sh` again (idempotent), at most once a
+  minute.
+- **Lock both apps in recents.** Recents → long-press the PupusPhone card → padlock; same for
+  Termux. Locked apps are not cleaned by the swipe.
+- **Autostart.** Settings → Apps → PupusPhone / Termux → *Autostart* on, and battery *No
+  restrictions*.
+- **Check.** App settings → *Estado* shows accessibility (active / down — repaired / down — no
+  permission), device API, bridge, Termux, the grant (with the command to copy), battery
+  optimisation and a *Reparar ahora* button.
 
 ## Known limitations
 

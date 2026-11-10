@@ -19,6 +19,7 @@ class PhoneAccessibilityService : AccessibilityService() {
         super.onServiceConnected()
         AudioCues.recoverMutedStreams(this)
         instance = this
+        AppSettings(this).isA11yWanted = true
         startServer()
         overlay = OverlayButton(this).also { it.show() }
     }
@@ -34,11 +35,17 @@ class PhoneAccessibilityService : AccessibilityService() {
         apiHost?.rebind()
     }
 
+    /** True while at least one device API server (port 8765) is bound. */
+    val isApiListening: Boolean
+        get() = apiHost?.isListening == true
+
     override fun onAccessibilityEvent(event: AccessibilityEvent?) = Unit
 
     override fun onInterrupt() = Unit
 
+    /** Only a clean disable (Settings) gets here; a process kill does not, so the guard may revive it. */
     override fun onUnbind(intent: Intent?): Boolean {
+        AppSettings(this).isA11yWanted = false
         shutdown()
         return super.onUnbind(intent)
     }
