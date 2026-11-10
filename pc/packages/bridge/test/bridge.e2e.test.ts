@@ -44,18 +44,17 @@ describe('connection', () => {
 });
 
 describe('turns', () => {
-  it('streams sentences as say frames, tool use as status, then done', async () => {
+  it('streams the answer as say frames, drops narration before a tool call, then done', async () => {
     phone.send({ type: 'utterance', id: 'u1', text: 'pon música' });
     await phone.waitDone('u1');
-    expect(phone.framesFor('u1').map((f) => f.type)).toEqual(['say', 'status', 'say', 'say', 'say', 'done']);
+    expect(phone.framesFor('u1').map((f) => f.type)).toEqual(['status', 'say', 'say', 'say', 'done']);
     const spoken = phone.framesFor('u1').flatMap((f) => (f.type === 'say' ? [f.text] : []));
     expect(spoken).toEqual([
-      'Vale, abro Spotify',
       'Listo.',
       'Suena la lista del Sr. Pérez, la número 3.5 de tus favoritas.',
       '¿Quieres que suba el volumen?',
     ]);
-    expect(phone.framesFor('u1')[1]).toEqual({ type: 'status', id: 'u1', text: 'Abriendo Spotify…' });
+    expect(phone.framesFor('u1')[0]).toEqual({ type: 'status', id: 'u1', text: 'Abriendo Spotify…' });
     expect(tb.readFile('utterances.log')).toBe('pon música\n');
   });
 
@@ -111,7 +110,7 @@ describe('interruption', () => {
     await phone.waitDone('b');
     const order = phone.frames.filter((f) => f.type === 'done').map((f) => (f.type === 'done' ? f.id : ''));
     expect(order).toEqual(['a', 'b']);
-    expect(phone.framesFor('b').filter((f) => f.type === 'say')).toHaveLength(4);
+    expect(phone.framesFor('b').filter((f) => f.type === 'say')).toHaveLength(3);
   });
 
   it('kills and resumes the session when the interrupt does not land', async () => {

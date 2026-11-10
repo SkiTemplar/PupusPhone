@@ -1,4 +1,5 @@
 import { SentenceChunker } from './chunker.ts';
+import { NarrationGate } from './narration-gate.ts';
 import type { ClaudeProcessHandlers } from './claude-process.ts';
 import { log } from './log.ts';
 import type { ServerFrame } from './protocol.ts';
@@ -28,6 +29,7 @@ interface Turn {
   readonly id: string;
   readonly startedAt: number;
   readonly chunker: SentenceChunker;
+  readonly gate: NarrationGate;
   cancelled: boolean;
   timers: ReturnType<typeof setTimeout>[];
 }
@@ -135,7 +137,7 @@ export class VoiceSession {
     if (!this.pending || this.turn || !this.isReady || !this.proc) return;
     const { id, text, receivedAt } = this.pending;
     this.pending = null;
-    const turn: Turn = { id, startedAt: receivedAt, chunker: new SentenceChunker(), cancelled: false, timers: [] };
+    const turn: Turn = { id, startedAt: receivedAt, chunker: new SentenceChunker(), gate: new NarrationGate(), cancelled: false, timers: [] };
     turn.timers.push(setTimeout(() => this.onTurnTimeout(id), this.opts.turnTimeoutMs));
     this.turn = turn;
     this.proc.sendUser(text);
@@ -183,8 +185,16 @@ export class VoiceSession {
     return this.turn && !this.turn.cancelled ? this.turn : null;
   }
 
+  /** Routes sentences through the narration gate; only the released ones are spoken. */
   private speak(turn: Turn, sentences: readonly string[]): void {
-    for (const text of sentences) this.opts.send({ type: 'say', id: turn.id, text });
+    for (const text of turn.gate.push(sentences)) this.opts.send({ type: 'say', id: turn.id, text });
+  }
+
+  /** A tool call follows: text still held was the model narrating its steps, not an answer. */
+  private dropNarration(turn: Turn): void {
+    turn.gate.push(turn.chunker.flush());
+    const dropped = turn.gate.dropForTool();
+    if (dropped.length > 0) log.debug(`dropped narration: ${dropped.join(' ')}`);
   }
 
   private onEvent(event: ClaudeEvent): void {
@@ -200,9 +210,12 @@ export class VoiceSession {
       case 'text_end':
         if (turn) this.speak(turn, turn.chunker.flush());
         return;
+      case 'tool_start':
+        if (turn) this.dropNarration(turn);
+        return;
       case 'tool':
         if (!turn) return;
-        this.speak(turn, turn.chunker.flush());
+        this.dropNarration(turn);
         this.opts.send({ type: 'status', id: turn.id, text: toolStatus(event.name, event.input) });
         return;
       case 'result':
@@ -222,6 +235,7 @@ export class VoiceSession {
     if (!turn) return;
     if (!turn.cancelled) {
       this.speak(turn, turn.chunker.flush());
+      for (const text of turn.gate.flush()) this.opts.send({ type: 'say', id: turn.id, text });
       if (event.isError) {
         log.warn(`turn ${turn.id} ended with ${event.subtype}: ${event.text ?? ''}`);
         this.opts.send({ type: 'error', id: turn.id, message: MSG_TURN_FAILED });

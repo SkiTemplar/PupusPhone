@@ -16,7 +16,8 @@
     "fake-phone": "node packages/fake-phone/src/cli.ts",
     "mcp": "node packages/mcp-server/src/cli.ts",
     "bridge": "node packages/bridge/src/cli.ts",
-    "smoke": "node scripts/smoke.ts"
+    "smoke": "node scripts/smoke.ts",
+    "ask": "node scripts/ask.ts"
   },
   "devDependencies": {
     "@types/node": "^24.19.2",

@@ -6,6 +6,8 @@
 export type ClaudeEvent =
   | { readonly kind: 'init'; readonly sessionId: string; readonly model: string; readonly tools: readonly string[] }
   | { readonly kind: 'text'; readonly text: string }
+  /** A tool_use content block started streaming: text held so far was narration. */
+  | { readonly kind: 'tool_start' }
   /** End of a text content block: flush the sentence chunker. */
   | { readonly kind: 'text_end' }
   | { readonly kind: 'tool'; readonly id: string; readonly name: string; readonly input: Readonly<Record<string, unknown>> }
@@ -42,6 +44,10 @@ function parseStreamEvent(msg: Json): ClaudeEvent {
     if (isObject(delta) && delta['type'] === 'text_delta' && typeof delta['text'] === 'string') {
       return { kind: 'text', text: delta['text'] };
     }
+  }
+  if (event['type'] === 'content_block_start') {
+    const block = event['content_block'];
+    if (isObject(block) && block['type'] === 'tool_use') return { kind: 'tool_start' };
   }
   if (event['type'] === 'content_block_stop') return { kind: 'text_end' };
   return IGNORE;
