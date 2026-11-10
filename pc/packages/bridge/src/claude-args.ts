@@ -1,5 +1,5 @@
 import { chmodSync, mkdirSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { basename, join, posix } from 'node:path';
 import type { BridgeConfig } from './config.ts';
 
 /** Name of the MCP server inside Claude Code; tools become `mcp__phone__<tool>`. */
@@ -36,6 +36,19 @@ export function claudeEnv(config: BridgeConfig, source: Readonly<Record<string, 
   return env;
 }
 
+/**
+ * Path of the Node.js executable for child processes. Under Termux, termux-exec launches Node
+ * through the Android dynamic linker, so resolveNodeBin() is `/apex/.../linker64` instead of node.
+ */
+export function resolveNodeBin(
+  execPath: string = process.execPath,
+  env: Readonly<Record<string, string | undefined>> = process.env,
+): string {
+  if (env['PUPUS_NODE_BIN']) return env['PUPUS_NODE_BIN'];
+  if (!/^linker(64)?$/.test(basename(execPath))) return execPath;
+  return env['PREFIX'] ? posix.join(env['PREFIX'], 'bin', 'node') : 'node';
+}
+
 /** Writes the MCP config (contains the phone token) into the private workdir and returns its path. */
 export function writeMcpConfig(config: BridgeConfig): string {
   mkdirSync(config.workdir, { recursive: true });
@@ -44,7 +57,7 @@ export function writeMcpConfig(config: BridgeConfig): string {
     mcpServers: {
       [MCP_SERVER_NAME]: {
         type: 'stdio',
-        command: process.execPath,
+        command: resolveNodeBin(),
         args: [config.mcpEntry],
         env: { PUPUS_PHONE_URL: config.phoneUrl, PUPUS_PHONE_TOKEN: config.phoneToken, PUPUS_LOG_LEVEL: 'warn' },
       },
@@ -89,6 +102,6 @@ export function buildClaudeLaunch(config: BridgeConfig, mcpConfigPath: string, s
     '--system-prompt', systemPrompt,
     ...(resumeSessionId ? ['--resume', resumeSessionId] : []),
   ];
-  if (/\.(c|m)?(j|t)s$/i.test(config.claudeBin)) return { command: process.execPath, args: [config.claudeBin, ...args] };
+  if (/\.(c|m)?(j|t)s$/i.test(config.claudeBin)) return { command: resolveNodeBin(), args: [config.claudeBin, ...args] };
   return { command: config.claudeBin, args };
 }
