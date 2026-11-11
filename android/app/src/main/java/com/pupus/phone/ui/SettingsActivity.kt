@@ -138,6 +138,9 @@ class SettingsActivity : Activity() {
         findViewById<View>(R.id.batteryButton).setOnClickListener {
             openSystemSettings(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
         }
+        findViewById<View>(R.id.notificationAccessButton).setOnClickListener {
+            openSystemSettings(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
+        }
     }
 
     private fun saveBridge(url: String, token: String) {

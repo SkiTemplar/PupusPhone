@@ -202,35 +202,50 @@ pasar lo mismo.
 
 ## Android Auto
 
-`car/PupusCarAppService` (Car App Library, `androidx.car.app:app`) muestra en la
-pantalla del coche un `PaneTemplate` con el estado (Listo, Escuchando, Pensando,
-Hablando), la última respuesta y un botón «Hablar» que hace lo mismo que tocar la
-burbuja (`VoiceLauncher.tap`: hablar, enviar o interrumpir según el estado). Las
-dos filas mantienen el título para que cada cambio cuente como refresco de la
-misma plantilla y no como un paso nuevo de la cuota del host.
+PupusPhone se presenta en Android Auto como **app de música** (`car/PupusMediaService`,
+`MediaBrowserService` + `MediaSession` del framework, sin dependencias AndroidX). Así
+ocupa la tarjeta multimedia junto al mapa, donde suele estar Spotify, y recibe el
+play/pause del volante. No reproduce audio:
 
-Categoría `androidx.car.app.category.IOT`: es la que describe una app que
-controla un dispositivo (aquí, el propio móvil) con plantillas genéricas y sin
-requisitos propios de la categoría (no es navegación, ni POI, ni mensajería con
-notificaciones, ni media). `minCarApiLevel` = 1: solo usa `PaneTemplate`, `Row` y
-`Action`.
+- ▶/⏸ es un toque de la burbuja (hablar, enviar o interrumpir). Solo actúa si coincide
+  con lo que muestra la tarjeta: un play tardío del coche no interrumpe un turno.
+- Título: la última respuesta (o «Pulsa ▶ para hablar»); subtítulo: el estado.
+- Carátula: el color del estado con el micrófono (`StateArtwork`), el mismo código de
+  colores que la burbuja.
+- Acción «Música» (♫): interrumpe el turno si lo hay y reanuda la última app de música
+  con su propio `MediaController` (`MusicHandoff`). En el Desktop Head Unit la tarjeta
+  siguió siendo la de PupusPhone con Spotify sonando; se pasa a la de Spotify deslizando
+  la tarjeta (los puntos de arriba a la derecha). Si hay un turno escuchando, ♫ lo envía
+  (es lo que hace un toque en ese estado), no lo descarta.
 
-Limitación real: Google no publica en Play para Android Auto asistentes de voz
-de terceros ni apps de control del móvil; esta app solo funciona instalada a mano
-y con el modo desarrollador de Android Auto. Pasos en tu coche:
+Para «Música» hace falta el acceso a notificaciones (Ajustes → «Acceso a notificaciones
+(botón ♫ de Android Auto)»): `MediaSessionManager.getActiveSessions` lo exige. El
+servicio `MusicNotificationListener` no lee notificaciones. Sin el permiso, la tarjeta
+muestra el aviso. Por adb:
+`adb shell cmd notification allow_listener com.pupus.phone/com.pupus.phone.car.MusicNotificationListener`.
 
-1. En el móvil, Ajustes → Android Auto (o la app Android Auto) → bajar hasta
-   «Versión» y tocarla 10 veces → aceptar el modo desarrollador.
+Comprobado en el Desktop Head Unit: la tarjeta pasa a PupusPhone en cuanto hace un turno
+(estado «reproduciendo»), ▶ arranca la escucha aunque el modo coche esté apagado y ♫
+reanuda Spotify. Un media key (`KEYCODE_MEDIA_PLAY`) no sirve para volver a la música:
+el sistema lo devuelve a PupusPhone, que empieza a escuchar.
+
+Android Auto muestra una sola entrada por app y la de plantillas (Car App Library) tapa a
+la de música, por eso se quitó la pantalla `PaneTemplate` de la categoría IOT.
+
+Limitación real: Google no publica en Play apps así; solo funciona instalada a mano y con
+el modo desarrollador de Android Auto. Pasos en tu coche:
+
+1. En el móvil, Ajustes → Android Auto → bajar hasta «Versión» y tocarla 10 veces →
+   aceptar el modo desarrollador.
 2. Menú ⋮ → «Ajustes de desarrollador» → activar «Fuentes desconocidas».
-3. Conectar al coche (o reconectar): PupusPhone aparece en el lanzador de
-   Android Auto.
-4. Encender el modo coche en el móvil antes de usarla: el botón reutiliza el
-   `VoiceService` que ya corre. Si no está en marcha, el servicio de micrófono se
-   intenta arrancar desde segundo plano y Android puede rechazarlo (el estado
-   pasa a «Modo coche apagado» con el error).
+3. Conectar al coche (o reconectar): PupusPhone aparece en el lanzador de Android Auto.
+4. Abrirla y pulsar ▶ una vez: desde ahí la tarjeta junto al mapa es la suya.
 
-El build debug acepta cualquier host; el release, solo los de la lista de la
-librería (`hosts_allowlist_sample`: Android Auto y el Desktop Head Unit).
+Probar en el PC con el Desktop Head Unit (SDK Manager → «Android Auto Desktop Head Unit
+Emulator», en `extras/google/auto`): menú ⋮ de Android Auto → «Start head unit server»,
+`adb forward tcp:5277 tcp:5277` y `desktop-head-unit.exe` desde una consola propia (sin
+stdin se cierra al arrancar). Si se queda en «Waiting for phone», parar e iniciar de
+nuevo el servidor en el móvil.
 
 ## Limitaciones conocidas
 

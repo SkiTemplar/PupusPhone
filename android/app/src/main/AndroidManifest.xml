@@ -99,23 +99,31 @@
             android:exported="false"
             android:permission="android.permission.BIND_JOB_SERVICE" />
 
-        <!-- Android Auto (Car App Library). Category IOT: the app controls a device (the phone)
-             with templates. Sideloaded only, see android/README.md. -->
+        <!-- Android Auto media source: the media card next to the map and the steering-wheel
+             play/pause. Plays no audio; see car/PupusMediaService. -->
         <service
-            android:name=".car.PupusCarAppService"
+            android:name=".car.PupusMediaService"
             android:exported="true">
             <intent-filter>
-                <action android:name="androidx.car.app.CarAppService" />
-                <category android:name="androidx.car.app.category.IOT" />
+                <action android:name="android.media.browse.MediaBrowserService" />
             </intent-filter>
         </service>
 
         <meta-data
             android:name="com.google.android.gms.car.application"
             android:resource="@xml/automotive_app_desc" />
-        <meta-data
-            android:name="androidx.car.app.minCarApiLevel"
-            android:value="1" />
+
+        <!-- Only to read the other media sessions (MediaSessionManager.getActiveSessions), so the
+             "Música" action of the car card can resume the music app. Notifications are ignored. -->
+        <service
+            android:name=".car.MusicNotificationListener"
+            android:exported="true"
+            android:label="@string/app_name"
+            android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE">
+            <intent-filter>
+                <action android:name="android.service.notification.NotificationListenerService" />
+            </intent-filter>
+        </service>
 
         <service
             android:name=".voice.VoiceService"

@@ -42,8 +42,6 @@ android {
 dependencies {
     implementation("org.nanohttpd:nanohttpd:2.3.1")
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
-    // Android Auto screen: the only AndroidX dependency allowed in this app.
-    implementation("androidx.car.app:app:1.4.0")
 
     testImplementation("junit:junit:4.13.2")
     // Real org.json implementation for JVM tests (android.jar only ships stubs).

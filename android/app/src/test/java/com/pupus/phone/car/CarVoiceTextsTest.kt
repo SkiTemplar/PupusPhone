@@ -23,15 +23,6 @@ class CarVoiceTextsTest {
     }
 
     @Test
-    fun theButtonSaysWhatATapDoes() {
-        assertEquals(R.string.car_action_talk, CarVoiceTexts.actionRes(VoiceState.STOPPED))
-        assertEquals(R.string.car_action_talk, CarVoiceTexts.actionRes(VoiceState.IDLE))
-        assertEquals(R.string.car_action_send, CarVoiceTexts.actionRes(VoiceState.LISTENING))
-        assertEquals(R.string.car_action_interrupt, CarVoiceTexts.actionRes(VoiceState.THINKING))
-        assertEquals(R.string.car_action_interrupt, CarVoiceTexts.actionRes(VoiceState.SPEAKING))
-    }
-
-    @Test
     fun replyIsCollapsedAndEmptyMeansNone() {
         assertEquals("Son las cinco. Hace sol.", CarVoiceTexts.replyText("  Son las cinco.\n\n Hace sol. "))
         assertNull(CarVoiceTexts.replyText(" \n "))
@@ -42,11 +33,5 @@ class CarVoiceTextsTest {
         val text = CarVoiceTexts.replyText("a".repeat(1_000))!!
         assertEquals(CarVoiceTexts.MAX_REPLY_CHARS, text.length)
         assertTrue(text.endsWith("…"))
-    }
-
-    @Test
-    fun combinesTheThree() {
-        val view = CarVoiceTexts.of(VoiceState.THINKING, isBridgeConnected = true, reply = "")
-        assertEquals(CarVoiceView(R.string.state_thinking, R.string.car_action_interrupt, null), view)
     }
 }

@@ -227,6 +227,7 @@
                 <TextView android:id="@+id/accessibilityText" style="@style/BodyText" android:textStyle="bold" />
                 <Button android:id="@+id/accessibilityButton" style="@style/SecondaryButton" android:layout_marginTop="16dp" android:text="@string/open_accessibility" />
                 <Button android:id="@+id/batteryButton" style="@style/SecondaryButton" android:text="@string/open_battery" />
+                <Button android:id="@+id/notificationAccessButton" style="@style/SecondaryButton" android:text="@string/open_notification_access" />
                 <Button android:id="@+id/permissionsButton" style="@style/SecondaryButton" android:text="@string/grant_permissions" />
             </LinearLayout>
         </LinearLayout>
