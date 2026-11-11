@@ -66,6 +66,8 @@
                 </LinearLayout>
                 <TextView android:id="@+id/diagBatteryText" style="@style/BodyText" />
                 <Button android:id="@+id/diagBatteryButton" style="@style/SecondaryButton" android:text="@string/diag_battery_request" />
+                <TextView android:id="@+id/diagMusicText" style="@style/BodyText" />
+                <Button android:id="@+id/diagMusicButton" style="@style/SecondaryButton" android:text="@string/music_access_grant" />
                 <TextView android:id="@+id/diagXiaomiTip" style="@style/HelpText" android:text="@string/diag_xiaomi_tip" android:textColor="@color/warning" />
                 <Button android:id="@+id/diagRepairButton" style="@style/PrimaryButton" android:layout_marginTop="16dp" android:text="@string/diag_repair" />
             </LinearLayout>
@@ -227,7 +229,6 @@
                 <TextView android:id="@+id/accessibilityText" style="@style/BodyText" android:textStyle="bold" />
                 <Button android:id="@+id/accessibilityButton" style="@style/SecondaryButton" android:layout_marginTop="16dp" android:text="@string/open_accessibility" />
                 <Button android:id="@+id/batteryButton" style="@style/SecondaryButton" android:text="@string/open_battery" />
-                <Button android:id="@+id/notificationAccessButton" style="@style/SecondaryButton" android:text="@string/open_notification_access" />
                 <Button android:id="@+id/permissionsButton" style="@style/SecondaryButton" android:text="@string/grant_permissions" />
             </LinearLayout>
         </LinearLayout>

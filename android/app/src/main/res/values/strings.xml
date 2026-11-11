@@ -53,6 +53,7 @@
     <string name="regenerate_token_message">El token actual dejará de funcionar al momento. Tendrás que copiar el nuevo y actualizarlo en el bridge del PC o de Termux.</string>
     <string name="regenerate">Regenerar</string>
     <string name="cancel">Cancelar</string>
+    <string name="not_now">Ahora no</string>
     <string name="token_regenerated">Token regenerado: actualízalo en el bridge</string>
     <string name="token_not_saved">El token nuevo está activo pero no se pudo guardar: cambiará al reiniciar</string>
     <string name="device_ips">Direcciones IP del móvil</string>
@@ -74,7 +75,11 @@
     <string name="car_media_hint">Pulsa ▶ para hablar</string>
     <string name="car_media_talk_item">Hablar con PupusPhone</string>
     <string name="car_action_music">Música</string>
-    <string name="open_notification_access">Acceso a notificaciones (botón ♫ de Android Auto)</string>
+    <string name="music_access_title">Acceso a notificaciones</string>
+    <string name="music_access_message">El botón ♫ de la tarjeta de Android Auto vuelve a tu música (Spotify, YouTube Music…). Para controlar esa app, Android exige el acceso a notificaciones. PupusPhone no lee tus notificaciones.</string>
+    <string name="music_access_grant">Dar acceso a notificaciones</string>
+    <string name="diag_music_on">Notificaciones: acceso concedido (botón ♫ de Android Auto)</string>
+    <string name="diag_music_off">Notificaciones: sin acceso (el botón ♫ de Android Auto no vuelve a la música)</string>
     <string name="music_access_missing">Falta el acceso a notificaciones para volver a la música</string>
     <string name="music_none">No hay otra app de música abierta</string>
     <string name="navigation_apps">Apps de navegación</string>

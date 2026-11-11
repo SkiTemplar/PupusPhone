@@ -218,8 +218,9 @@ play/pause del volante. No reproduce audio:
   la tarjeta (los puntos de arriba a la derecha). Si hay un turno escuchando, ♫ lo envía
   (es lo que hace un toque en ese estado), no lo descarta.
 
-Para «Música» hace falta el acceso a notificaciones (Ajustes → «Acceso a notificaciones
-(botón ♫ de Android Auto)»): `MediaSessionManager.getActiveSessions` lo exige. El
+Para «Música» hace falta el acceso a notificaciones: la app lo pide al abrirse (una vez
+por proceso mientras falte) y la tarjeta «Estado» de Ajustes lo muestra con un botón que
+abre directamente el interruptor de PupusPhone. `MediaSessionManager.getActiveSessions` lo exige. El
 servicio `MusicNotificationListener` no lee notificaciones. Sin el permiso, la tarjeta
 muestra el aviso. Por adb:
 `adb shell cmd notification allow_listener com.pupus.phone/com.pupus.phone.car.MusicNotificationListener`.

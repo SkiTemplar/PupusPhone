@@ -17,6 +17,7 @@ import android.widget.TextView
 import android.widget.Toast
 import com.pupus.phone.PhoneAccessibilityService
 import com.pupus.phone.R
+import com.pupus.phone.car.MusicAccess
 import com.pupus.phone.guard.A11yDisplay
 import com.pupus.phone.guard.A11yOutcome
 import com.pupus.phone.guard.AccessibilityGuard
@@ -25,18 +26,21 @@ import com.pupus.phone.voice.VoiceBus
 
 /**
  * "Estado" card: accessibility (with the self-heal result), device API, bridge, Termux,
- * WRITE_SECURE_SETTINGS (with the adb grant command), battery optimisation and the Xiaomi tip.
+ * WRITE_SECURE_SETTINGS (with the adb grant command), battery optimisation, notification access
+ * (the "Música" action of the Android Auto card) and the Xiaomi tip.
  */
 class DiagnosticsPanel(private val activity: Activity) {
     private val termux = TermuxLauncher(activity)
     private val a11yText: TextView = activity.findViewById(R.id.diagA11yText)
     private val grantGroup: View = activity.findViewById(R.id.diagGrantGroup)
     private val batteryButton: Button = activity.findViewById(R.id.diagBatteryButton)
+    private val musicButton: Button = activity.findViewById(R.id.diagMusicButton)
 
     fun bind() {
         activity.findViewById<TextView>(R.id.diagGrantCommand).text = AccessibilityGuard.GRANT_COMMAND
         activity.findViewById<Button>(R.id.diagCopyGrantButton).setOnClickListener { copyGrantCommand() }
         batteryButton.setOnClickListener { requestIgnoreBatteryOptimizations() }
+        musicButton.setOnClickListener { MusicAccess.request(activity) }
         activity.findViewById<Button>(R.id.diagRepairButton).setOnClickListener { repairNow() }
         val isXiaomi = Build.MANUFACTURER.equals(XIAOMI, ignoreCase = true)
         activity.findViewById<View>(R.id.diagXiaomiTip).visibility = if (isXiaomi) View.VISIBLE else View.GONE
@@ -56,6 +60,9 @@ class DiagnosticsPanel(private val activity: Activity) {
             ?.isIgnoringBatteryOptimizations(activity.packageName) == true
         line(R.id.diagBatteryText, isBatteryFree, if (isBatteryFree) R.string.diag_battery_on else R.string.diag_battery_off)
         batteryButton.visibility = if (isBatteryFree) View.GONE else View.VISIBLE
+        val hasMusic = MusicAccess.isGranted(activity)
+        line(R.id.diagMusicText, hasMusic, if (hasMusic) R.string.diag_music_on else R.string.diag_music_off)
+        musicButton.visibility = if (hasMusic) View.GONE else View.VISIBLE
     }
 
     private fun renderA11y() {

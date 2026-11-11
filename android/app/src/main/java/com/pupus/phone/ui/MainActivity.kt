@@ -1,6 +1,7 @@
 package com.pupus.phone.ui
 
 import android.app.Activity
+import android.app.AlertDialog
 import android.content.Intent
 import android.os.Bundle
 import android.view.View
@@ -9,6 +10,7 @@ import android.widget.Switch
 import android.widget.TextView
 import com.pupus.phone.PhoneAccessibilityService
 import com.pupus.phone.R
+import com.pupus.phone.car.MusicAccess
 import com.pupus.phone.guard.AccessibilityGuard
 import com.pupus.phone.voice.VoiceBus
 import com.pupus.phone.voice.VoiceLauncher
@@ -73,6 +75,19 @@ class MainActivity : Activity() {
         carMode.isSaveEnabled = false
         bindControls()
         requestVoicePermissions()
+        askMusicAccess()
+    }
+
+    /** Once per process while it is missing: the "Música" button of the Android Auto card needs it. */
+    private fun askMusicAccess() {
+        if (hasAskedMusicAccess || MusicAccess.isGranted(this)) return
+        hasAskedMusicAccess = true
+        AlertDialog.Builder(this)
+            .setTitle(R.string.music_access_title)
+            .setMessage(R.string.music_access_message)
+            .setPositiveButton(R.string.music_access_grant) { _, _ -> MusicAccess.request(this) }
+            .setNegativeButton(R.string.not_now, null)
+            .show()
     }
 
     override fun onResume() {
@@ -159,5 +174,8 @@ class MainActivity : Activity() {
 
     private companion object {
         const val A11Y_POLL_MS = 2_000L
+
+        /** Process-wide so a rotation or reopening the screen does not ask again. */
+        private var hasAskedMusicAccess = false
     }
 }
