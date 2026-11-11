@@ -12,6 +12,11 @@ if [ -f "$ENV_FILE" ]; then
   set +a
 fi
 
+# Marker for termux-start.sh: a start that arrives now waits until this stop is over. Left
+# behind on purpose if the service stop below kills this script; the start checks the PID.
+STOPPING_DIR="${PUPUS_STATE_DIR:-$HOME/.pupusphone}/stopping"
+mkdir -p "$STOPPING_DIR" && : > "$STOPPING_DIR/$"
+
 BRIDGE_PATTERN="packages/bridge/src/cli.ts"
 CHILD_PATTERNS=("mcp-server/src/cli.ts" "--strict-mcp-config")
 
@@ -31,5 +36,7 @@ termux-wake-unlock 2>/dev/null
 if [ "${PUPUS_STOP_TERMUX:-1}" = "1" ]; then
   # Same as the "Exit" button of the Termux notification: ends every session and task.
   am startservice -a com.termux.service_stop -n com.termux/.app.TermuxService >/dev/null 2>&1
+  sleep 1
 fi
+rm -f "$STOPPING_DIR/$"
 exit 0

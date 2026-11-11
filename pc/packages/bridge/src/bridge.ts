@@ -1,4 +1,4 @@
-import { mkdirSync, readFileSync, rmSync } from 'node:fs';
+import { readFileSync, rmSync } from 'node:fs';
 import { buildClaudeLaunch, claudeEnv, writeMcpConfig } from './claude-args.ts';
 import { ClaudeProcess } from './claude-process.ts';
 import type { BridgeConfig } from './config.ts';
@@ -35,11 +35,13 @@ function readSystemPrompt(path: string): string {
 /** Starts the WebSocket server and the persistent Claude Code process. */
 export async function startBridge(config: BridgeConfig, overrides: BridgeOverrides = {}): Promise<RunningBridge> {
   const systemPrompt = readSystemPrompt(config.systemPromptFile);
-  mkdirSync(config.workdir, { recursive: true });
-  const mcpConfigPath = writeMcpConfig(config);
   const env = claudeEnv(config, overrides.env ?? process.env);
+  // Written before every spawn, not once: the workdir lives in the temp dir by default and can
+  // be wiped while the bridge runs (Termux clears $TMPDIR when its service stops), and a
+  // missing cwd makes every later spawn fail with ENOENT.
   const spawn: SpawnFn = (resume, handlers) =>
-    new ClaudeProcess(buildClaudeLaunch(config, mcpConfigPath, systemPrompt, resume), { cwd: config.workdir, env }, handlers);
+    new ClaudeProcess(buildClaudeLaunch(config, writeMcpConfig(config), systemPrompt, resume), { cwd: config.workdir, env }, handlers);
+  const mcpConfigPath = writeMcpConfig(config);
 
   const server = await startVoiceServer({ host: config.host, port: config.port, token: config.token, model: config.model });
   const session = new VoiceSession({

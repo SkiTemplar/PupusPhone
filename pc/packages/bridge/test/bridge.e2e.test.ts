@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { readFileSync } from 'node:fs';
+import { readFileSync, rmSync } from 'node:fs';
+import { join } from 'node:path';
 import { eventually, startTestBridge, VoiceClient, type TestBridge } from './ws-helpers.ts';
 
 let tb: TestBridge;
@@ -157,6 +158,17 @@ describe('lifecycle', () => {
     phone.send({ type: 'reset' });
     await phone.waitFor((f) => f.type === 'ready', 5000, mark);
     expect(await spawns(2)).toEqual(['new', 'new']);
+  });
+
+  it('rewrites the MCP config before each spawn when it was wiped while running', async () => {
+    // Termux clears $TMPDIR when its service stops. Only the file is removed here: Windows does
+    // not let the test delete a directory that is the cwd of the running fake claude.
+    await spawns(1);
+    rmSync(join(tb.workdir, 'mcp-config.json'));
+    const mark = phone.frames.length;
+    phone.send({ type: 'reset' });
+    await phone.waitFor((f) => f.type === 'ready', 5000, mark);
+    expect(JSON.parse(tb.readFile('mcp-config.json'))).toHaveProperty('mcpServers');
   });
 
   it('a newer connection replaces the older one', async () => {
