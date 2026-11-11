@@ -28,6 +28,8 @@ export interface RunningVoiceServer {
   readonly port: number;
   /** Sends a frame to the connected phone (the latest connection wins). */
   broadcast(frame: ServerFrame): void;
+  /** True while a phone is connected. */
+  hasClient(): boolean;
   attach(session: VoiceSession): void;
   close(): Promise<void>;
 }
@@ -70,9 +72,13 @@ export async function startVoiceServer(opts: VoiceServerOptions): Promise<Runnin
   wss.on('connection', (ws: WebSocket, req: IncomingMessage) => {
     if (active && active !== ws) active.close(4000, 'replaced by a newer connection');
     active = ws;
+    const connectedAt = Date.now();
     log.info(`phone connected from ${req.socket.remoteAddress ?? '?'}`);
     ws.on('message', (data: RawData, isBinary: boolean) => onMessage(ws, data, isBinary));
-    ws.on('close', () => {
+    ws.on('close', (code: number, reason: Buffer) => {
+      const seconds = Math.round((Date.now() - connectedAt) / 1000);
+      const detail = reason.length > 0 ? ` ${reason.toString()}` : '';
+      log.info(`phone disconnected (code ${code}${detail}) after ${seconds} s`);
       if (active === ws) active = null;
     });
     ws.on('error', (err) => log.warn(`websocket error: ${err.message}`));
@@ -100,6 +106,7 @@ export async function startVoiceServer(opts: VoiceServerOptions): Promise<Runnin
   return {
     port,
     broadcast: send,
+    hasClient: () => active?.readyState === WebSocket.OPEN,
     attach: (s) => {
       session = s;
     },

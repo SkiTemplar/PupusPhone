@@ -99,6 +99,20 @@ bash ~/PupusPhone/scripts/termux-start.sh   # idempotent; log in ~/.pupusphone/b
 
 `termux-wake-lock` is taken automatically.
 
+## Stopping
+
+- **Car mode off.** The app runs `scripts/termux-stop.sh`: it stops the bridge, Claude Code and the
+  MCP server, releases the wake lock and closes the Termux service (like the *Exit* button of its
+  notification). Set `PUPUS_STOP_TERMUX=0` in `~/.pupusphone.env` to keep Termux open if you also
+  use it by hand.
+- **App killed** (swiped away, HyperOS cleaner). The app cannot say anything, so the bridge exits
+  on its own after `PUPUS_IDLE_EXIT_SECONDS` (default 180) without a phone connected, and the same
+  cleanup runs. Idle time is counted in 10 s ticks, so a frozen process does not count as idle.
+
+The bridge log records every disconnection (`phone disconnected (code …) after N s`) and every time
+the process did not run for 15 s or more (`bridge process did not run for N s`): the latter means
+Android froze Termux or let the CPU sleep.
+
 ## Troubleshooting
 
 | Symptom | Fix |
@@ -108,6 +122,7 @@ bash ~/PupusPhone/scripts/termux-start.sh   # idempotent; log in ~/.pupusphone/b
 | Accessibility switch greyed out | Step 3: *Allow restricted settings*. |
 | `ERROR: cannot fast-forward ~/PupusPhone` | You edited files there: `mv ~/PupusPhone ~/PupusPhone.old` and re-run. |
 | Bridge stops after a while | Battery *Unrestricted* and the brand notes above. |
+| Bridge keeps disconnecting, log shows `did not run for N s` | HyperOS freezes Termux: *App info › Battery saver › No restrictions* and *Autostart* for Termux. Check with `adb shell dumpsys power | grep termux`: the wake lock must not say `DISABLED`. |
 | Accessibility dies after swiping the app away (Xiaomi) | See *HyperOS kills the app when swiped from recents* below. |
 | Voice says it cannot reach the phone | Device token changed in the app: use *Configurar Termux* again. |
 

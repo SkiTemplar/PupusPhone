@@ -148,6 +148,8 @@ class VoiceService : Service(), BridgeClient.Listener, SpeechInput.Callback {
         input.cancel()
         abortTurn()
         bridge.close()
+        // The bridge, Claude Code and the Termux wake lock go with car mode.
+        TermuxLauncher(this).stopIfNeeded(AppSettings(this))
         wakeLock.release()
         VoiceBus.publishBridge(false)
         VoiceBus.publish(VoiceState.STOPPED, getString(R.string.state_stopped))

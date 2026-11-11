@@ -2,6 +2,7 @@ package com.pupus.phone.voice
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -99,5 +100,20 @@ class TermuxLaunchPolicyTest {
         assertEquals("com.termux.permission.RUN_COMMAND", TermuxRunCommand.PERMISSION)
         assertEquals("com.termux.RUN_COMMAND_PATH", TermuxRunCommand.EXTRA_COMMAND_PATH)
         assertEquals("com.termux.RUN_COMMAND_BACKGROUND", TermuxRunCommand.EXTRA_BACKGROUND)
+    }
+
+    @Test
+    fun stopScriptSitsNextToTheStartScript() {
+        assertEquals(
+            "/data/data/com.termux/files/home/PupusPhone/scripts/termux-stop.sh",
+            TermuxLaunchPolicy.stopScriptPath(TermuxRunCommand.DEFAULT_SCRIPT_PATH),
+        )
+        assertEquals("~/x/termux-stop.sh", TermuxLaunchPolicy.stopScriptPath(" ~/x/termux-start.sh "))
+    }
+
+    @Test
+    fun noStopScriptForCustomOrInvalidStartScripts() {
+        assertNull(TermuxLaunchPolicy.stopScriptPath("/data/data/com.termux/files/home/bridge.sh"))
+        assertNull(TermuxLaunchPolicy.stopScriptPath("termux-start.sh"))
     }
 }

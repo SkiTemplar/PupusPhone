@@ -19,6 +19,8 @@ export interface BridgeConfig {
   readonly systemPromptFile: string;
   readonly turnTimeoutMs: number;
   readonly interruptTimeoutMs: number;
+  /** Seconds without any phone connected before the bridge exits; 0 keeps it running (PC default). */
+  readonly idleExitSeconds: number;
   /** Extra environment variable names passed through to the Claude process. */
   readonly envPassthrough: readonly string[];
 }
@@ -75,6 +77,7 @@ export function loadBridgeConfig(env: Env = process.env): BridgeConfig {
     systemPromptFile: env['PUPUS_SYSTEM_PROMPT_FILE'] || defaultPath('../prompts/voice-system-prompt.md'),
     turnTimeoutMs: int(env, 'PUPUS_TURN_TIMEOUT_MS', 120_000, 1000, 600_000),
     interruptTimeoutMs: int(env, 'PUPUS_INTERRUPT_TIMEOUT_MS', 3000, 100, 60_000),
+    idleExitSeconds: int(env, 'PUPUS_IDLE_EXIT_SECONDS', 0, 0, 86_400),
     envPassthrough: (env['PUPUS_CLAUDE_ENV_PASSTHROUGH'] ?? '').split(',').map((s) => s.trim()).filter(Boolean),
   };
 }

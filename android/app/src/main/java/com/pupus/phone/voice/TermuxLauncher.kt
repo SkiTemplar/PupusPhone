@@ -50,6 +50,21 @@ class TermuxLauncher(context: Context) {
         return send(env.scriptPath, status)
     }
 
+    /**
+     * Car mode off: asks Termux to stop the bridge, Claude Code, the wake lock and the Termux
+     * service (scripts/termux-stop.sh). Same conditions as the start. Never throws.
+     */
+    fun stopIfNeeded(settings: AppSettings): Boolean {
+        val env = environment(settings)
+        if (!TermuxLaunchPolicy.shouldLaunch(env)) return false
+        val stopPath = TermuxLaunchPolicy.stopScriptPath(env.scriptPath)
+        if (stopPath == null) {
+            Log.w(TAG, "No stop script next to ${env.scriptPath}: the bridge keeps running")
+            return false
+        }
+        return send(stopPath, TermuxStatus.READY).isSent
+    }
+
     private fun send(scriptPath: String, status: TermuxStatus): TermuxLaunchResult {
         // Background: Termux runs the script in an app shell, without opening a terminal session.
         val intent = Intent(TermuxRunCommand.ACTION)

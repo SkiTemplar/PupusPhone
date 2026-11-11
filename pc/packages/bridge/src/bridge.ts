@@ -5,6 +5,8 @@ import type { BridgeConfig } from './config.ts';
 import { log } from './log.ts';
 import { startVoiceServer, type RunningVoiceServer } from './server.ts';
 import { VoiceSession, type SpawnFn } from './session.ts';
+import { startStallMonitor } from './stall-monitor.ts';
+import { startIdleExit } from './idle-exit.ts';
 
 export interface RunningBridge {
   readonly port: number;
@@ -16,6 +18,8 @@ export interface RunningBridge {
 export interface BridgeOverrides {
   readonly env?: Readonly<Record<string, string | undefined>>;
   readonly backoffMs?: readonly number[];
+  /** Called once when no phone was connected for `idleExitSeconds` (only if that is > 0). */
+  readonly onIdle?: () => void;
 }
 
 function readSystemPrompt(path: string): string {
@@ -48,12 +52,29 @@ export async function startBridge(config: BridgeConfig, overrides: BridgeOverrid
   });
   server.attach(session);
   session.start();
+  const stopStallMonitor = startStallMonitor({
+    onStall: (ms) => log.warn(`bridge process did not run for ${Math.round(ms / 1000)} s (frozen by the OS or CPU asleep)`),
+  });
+  const onIdle = overrides.onIdle;
+  const stopIdleExit =
+    config.idleExitSeconds > 0 && onIdle
+      ? startIdleExit({
+          idleMs: config.idleExitSeconds * 1000,
+          hasClient: server.hasClient,
+          onIdle: () => {
+            log.info(`no phone connected for ${config.idleExitSeconds} s: exiting`);
+            onIdle();
+          },
+        })
+      : () => undefined;
   log.info(`voice bridge on ws://${config.host}:${server.port}/voice (model ${config.model})`);
   return {
     port: server.port,
     server,
     session,
     close: async () => {
+      stopStallMonitor();
+      stopIdleExit();
       session.stop();
       await server.close();
       rmSync(mcpConfigPath, { force: true });

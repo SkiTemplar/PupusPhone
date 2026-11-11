@@ -5,8 +5,9 @@ import { loadBridgeConfig } from './config.ts';
 import { log } from './log.ts';
 
 async function main(): Promise<void> {
-  const bridge = await startBridge(loadBridgeConfig());
-  const stop = (): void => {
+  let stop = (): void => undefined;
+  const bridge = await startBridge(loadBridgeConfig(), { onIdle: () => stop() });
+  stop = (): void => {
     log.info('shutting down');
     bridge.close().then(() => process.exit(0), () => process.exit(1));
   };

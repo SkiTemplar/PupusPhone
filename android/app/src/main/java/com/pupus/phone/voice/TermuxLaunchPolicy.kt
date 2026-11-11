@@ -48,6 +48,16 @@ object TermuxLaunchPolicy {
     fun shouldLaunch(env: TermuxEnvironment): Boolean = status(env) == TermuxStatus.READY
 
     /**
+     * Script that stops the bridge, next to the start script: `…/termux-start.sh` becomes
+     * `…/termux-stop.sh`. Null when the start script has another name (custom setup).
+     */
+    fun stopScriptPath(startPath: String): String? {
+        val trimmed = startPath.trim()
+        if (!isValidScriptPath(trimmed) || !trimmed.endsWith(START_SCRIPT)) return null
+        return trimmed.removeSuffix(START_SCRIPT) + STOP_SCRIPT
+    }
+
+    /**
      * True when the user expects the bridge on this phone but it cannot be started:
      * car mode must say why instead of silently retrying the connection.
      */
@@ -80,6 +90,8 @@ object TermuxLaunchPolicy {
         return http.toHttpUrlOrNull()?.host
     }
 
+    private const val START_SCRIPT = "termux-start.sh"
+    private const val STOP_SCRIPT = "termux-stop.sh"
     private const val WS_PREFIX = 5
     private const val WSS_PREFIX = 6
     private const val MAX_OCTET = 255

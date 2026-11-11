@@ -26,7 +26,16 @@ if [ -f "$LOG_FILE" ] && [ "$(wc -c < "$LOG_FILE")" -gt 1048576 ]; then
   tail -c 524288 "$LOG_FILE" > "$LOG_FILE.tmp" && mv "$LOG_FILE.tmp" "$LOG_FILE"
 fi
 
+# On the phone the app can be killed without notice (swiped away): the bridge exits on its own
+# after this many seconds without a phone connected, and everything is cleaned up below.
+export PUPUS_IDLE_EXIT_SECONDS="${PUPUS_IDLE_EXIT_SECONDS:-180}"
+
 termux-wake-lock 2>/dev/null || echo "termux-wake-lock unavailable; keep Termux unrestricted in battery settings" >&2
 cd "$REPO_DIR/pc"
 echo "Starting bridge on $HOST:$PORT (log: $LOG_FILE)"
-exec node packages/bridge/src/cli.ts >> "$LOG_FILE" 2>&1
+status=0
+node packages/bridge/src/cli.ts >> "$LOG_FILE" 2>&1 || status=$?
+echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) [start] bridge exited with status $status" >> "$LOG_FILE"
+# Wake lock, leftover Claude/MCP processes and the Termux service go with the bridge.
+bash "$REPO_DIR/scripts/termux-stop.sh"
+exit "$status"
