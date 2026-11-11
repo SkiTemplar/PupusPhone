@@ -120,7 +120,11 @@ class VoiceService : Service(), BridgeClient.Listener, SpeechInput.Callback {
         if (!step.shouldRelaunch) return
         Log.w(TAG, "Bridge down for more than ${BridgeWatchdog.GRACE_MS / 1000} s: asking Termux to start it again")
         val result = TermuxLauncher(this).launchIfNeeded(settings)
-        if (!result.isSent) Log.w(TAG, "Watchdog relaunch not sent: ${result.status}")
+        if (!result.isSent) {
+            Log.w(TAG, "Watchdog relaunch not sent: ${result.status}")
+            return
+        }
+        bridge.retryNow()
     }
 
     override fun onDestroy() {

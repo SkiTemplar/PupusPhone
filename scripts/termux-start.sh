@@ -21,6 +21,31 @@ fi
 
 LOG_FILE="${PUPUS_LOG_FILE:-$HOME/.pupusphone/bridge.log}"
 mkdir -p "$(dirname "$LOG_FILE")"
+
+# One start at a time. Android can deliver two RUN_COMMAND starts together (a frozen Termux gets
+# the queued one late): both would see the port free, one would fail with EADDRINUSE and its
+# cleanup below would kill the bridge that won. The loser leaves without touching anything.
+LOCK_DIR="${PUPUS_LOCK_DIR:-$HOME/.pupusphone/start.lock}"
+is_start_script() {
+  [ -n "$1" ] && [ -r "/proc/$1/cmdline" ] && tr '\0' ' ' < "/proc/$1/cmdline" | grep -q "termux-start.sh"
+}
+take_lock() {
+  mkdir "$LOCK_DIR" 2>/dev/null || return 1
+  echo "$$" > "$LOCK_DIR/pid"
+}
+if ! take_lock; then
+  # The owner writes its PID right after mkdir: give it a moment before calling the lock stale.
+  [ -s "$LOCK_DIR/pid" ] || sleep 0.5
+  owner="$(cat "$LOCK_DIR/pid" 2>/dev/null || true)"
+  if is_start_script "$owner"; then
+    echo "Another termux-start.sh (pid $owner) is already starting the bridge"
+    exit 0
+  fi
+  # Stale lock: its owner was killed (Termux closed) before it could remove it.
+  rm -rf "$LOCK_DIR"
+  take_lock || { echo "Another termux-start.sh took the lock"; exit 0; }
+fi
+trap 'rm -rf "$LOCK_DIR"' EXIT
 # Keep the last ~1 MB of logs.
 if [ -f "$LOG_FILE" ] && [ "$(wc -c < "$LOG_FILE")" -gt 1048576 ]; then
   tail -c 524288 "$LOG_FILE" > "$LOG_FILE.tmp" && mv "$LOG_FILE.tmp" "$LOG_FILE"

@@ -46,6 +46,20 @@ class BridgeClient(private val listener: Listener) {
 
     fun isConnected(): Boolean = isOpen
 
+    /**
+     * The bridge was just asked to start: drops the pending retry (up to 30 s away) and
+     * starts the backoff again from 1 s, so the socket opens soon after the bridge listens.
+     */
+    fun retryNow() {
+        if (isStopped || isOpen) return
+        generation++
+        main.removeCallbacksAndMessages(null)
+        socket?.cancel()
+        socket = null
+        policy.onUserConnect()
+        open()
+    }
+
     fun send(frame: String): Boolean {
         val ws = socket
         if (ws == null || !isOpen) {
