@@ -20,7 +20,7 @@
     "ask": "node scripts/ask.ts"
   },
   "devDependencies": {
-    "@types/node": "^24.19.2",
+    "@types/node": "^26.6.6",
     "@types/ws": "^8.18.1",
     "typescript": "~5.9.3",
     "vitest": "^4.1.12"
