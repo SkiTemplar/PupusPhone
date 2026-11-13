@@ -41,6 +41,15 @@ const SIMPLE: Readonly<Record<string, string>> = {
   type_text: 'Escribiendo…',
   list_apps: 'Buscando la app…',
   wait: 'Esperando…',
+  play_music: 'Poniendo música…',
+  now_playing: 'Mirando qué suena…',
+  read_notifications: 'Leyendo las notificaciones…',
+  find_contact: 'Buscando el contacto…',
+  call: 'Llamando…',
+  whatsapp_send: 'Enviando el WhatsApp…',
+  navigate: 'Abriendo la navegación…',
+  remember: 'Apuntándolo…',
+  forget: 'Olvidándolo…',
 };
 
 function appName(pkg: unknown, name: unknown): string {

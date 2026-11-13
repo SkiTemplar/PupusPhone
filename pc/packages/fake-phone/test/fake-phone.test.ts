@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
-import { startFakePhone, type RunningFakePhone, type ScreenTree } from '../src/index.ts';
+import { defaultScenario, startFakePhone, type RunningFakePhone, type ScreenTree } from '../src/index.ts';
 
 const TOKEN = 'fake-phone-test-token';
 let fake: RunningFakePhone;
@@ -81,5 +81,35 @@ describe('scripted screens', () => {
     expect((await api('POST', '/input/text', { text: 'Queen', submit: true })).json).toEqual({ ok: true });
     const tree = (await api('GET', '/screen/tree')).json as ScreenTree;
     expect(tree.nodes.find((n) => n.resId === 'query')?.text).toBe('Queen');
+  });
+});
+
+describe('system service endpoints', () => {
+  it('validates contacts, call and play_search bodies', async () => {
+    expect((await api('GET', '/contacts')).status).toBe(400);
+    expect((await api('GET', `/contacts?q=${'x'.repeat(65)}`)).status).toBe(400);
+    expect((await api('POST', '/call', { number: 'abc' })).status).toBe(400);
+    expect((await api('POST', '/media/play_search', { query: '' })).status).toBe(400);
+  });
+
+  it('returns 409 when no session supports play from search and no package is given', async () => {
+    const custom = await startFakePhone({ token: TOKEN, port: 0, scenario: { ...defaultScenario(), mediaSessions: [] } });
+    const res = await fetch(`${custom.url}/media/play_search`, {
+      method: 'POST',
+      headers: { authorization: `Bearer ${TOKEN}`, 'content-type': 'application/json' },
+      body: JSON.stringify({ query: 'Queen' }),
+    });
+    expect(res.status).toBe(409);
+    expect(await res.json()).toEqual({ error: 'no_media_session' });
+    await custom.close();
+  });
+
+  it('plays from search through the first searchable session and pauses the others', async () => {
+    const { json } = await api('POST', '/media/play_search', { query: 'Queen' });
+    expect(json).toEqual({ ok: true, package: 'com.spotify.music', via: 'session' });
+    expect(fake.phone.services.mediaSessions.map((s) => [s.package, s.playing])).toEqual([
+      ['com.spotify.music', true],
+      ['com.google.android.apps.podcasts', false],
+    ]);
   });
 });

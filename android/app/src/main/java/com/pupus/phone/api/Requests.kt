@@ -17,6 +17,8 @@ data class ScrollRequest(val direction: ScrollDirection, val nodeId: Int?)
 data class TextRequest(val text: String, val nodeId: Int?, val submit: Boolean)
 data class IntentRequest(val action: String, val data: String?, val pkg: String?, val extras: Map<String, String>)
 data class ShotParams(val scale: Float, val quality: Int)
+data class PlaySearchRequest(val query: String, val pkg: String?)
+data class CallRequest(val number: String)
 
 enum class ScrollDirection(val wire: String, val forward: Boolean) {
     UP("up", false), DOWN("down", true), LEFT("left", false), RIGHT("right", true)
@@ -40,6 +42,10 @@ object RequestParser {
     const val DEFAULT_QUALITY = 60
     const val DEFAULT_INTENT_ACTION = "android.intent.action.VIEW"
     private const val MAX_DURATION_MS = 60_000
+    private const val MAX_QUERY = 200
+    private const val MAX_CONTACT_QUERY = 64
+    private val PHONE_RE = Regex("^\\+?[0-9 ()-]{3,20}$")
+    private val PACKAGE_RE = Regex("^[A-Za-z]\\w*(\\.[A-Za-z]\\w*)+$")
 
     fun body(raw: String?): JSONObject {
         if (raw.isNullOrBlank()) return JSONObject()
@@ -106,6 +112,32 @@ object RequestParser {
             ?: DEFAULT_QUALITY
         if (quality !in 10..100) throw BadRequest("quality must be in 10-100")
         return ShotParams(scale, quality)
+    }
+
+    fun playSearch(o: JSONObject): PlaySearchRequest {
+        val query = reqString(o, "query").trim()
+        if (query.length > MAX_QUERY) throw BadRequest("query must be at most $MAX_QUERY chars")
+        return PlaySearchRequest(query, optPackage(optString(o, "package")))
+    }
+
+    fun call(o: JSONObject): CallRequest {
+        val number = reqString(o, "number").trim()
+        if (!PHONE_RE.matches(number)) throw BadRequest("number must match +?[0-9 ()-]{3,20}")
+        return CallRequest(number)
+    }
+
+    fun contactsQuery(query: Map<String, String>): String {
+        val q = query["q"]?.trim().orEmpty()
+        if (q.length !in 1..MAX_CONTACT_QUERY) throw BadRequest("q must be 1-$MAX_CONTACT_QUERY chars")
+        return q
+    }
+
+    fun notificationsPackage(query: Map<String, String>): String? =
+        optPackage(query["package"]?.trim()?.takeIf { it.isNotEmpty() })
+
+    private fun optPackage(pkg: String?): String? {
+        if (pkg != null && !PACKAGE_RE.matches(pkg)) throw BadRequest("package is not a valid package name")
+        return pkg
     }
 
     fun visibleOnly(query: Map<String, String>): Boolean = when (query["visibleOnly"]?.lowercase()) {

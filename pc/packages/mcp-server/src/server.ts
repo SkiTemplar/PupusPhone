@@ -6,13 +6,15 @@ import type { ToolContext } from './tools/context.ts';
 import { registerInputTools } from './tools/input.ts';
 import { registerMemoryTools } from './tools/memory.ts';
 import { registerScreenTools } from './tools/screen.ts';
+import { registerShortcutTools } from './tools/shortcuts.ts';
 import { registerTextTools } from './tools/text.ts';
 
 export const SERVER_NAME = 'phone';
 export const SERVER_VERSION = '0.1.0';
 
-const INSTRUCTIONS = `Controls the user's Android phone (PupusPhone). Fastest path first: open_url deep links and
-media keys beat UI navigation; launch_app accepts a visible name; tap_text taps by label without a prior read_screen. Action tools return the updated screen, so a
+const INSTRUCTIONS = `Controls the user's Android phone (PupusPhone). Fastest path first: one-call shortcuts
+(play_music, now_playing, read_notifications, find_contact, call, whatsapp_send, navigate) beat everything else;
+then open_url deep links and media keys beat UI navigation; launch_app accepts a visible name; tap_text taps by label without a prior read_screen. Action tools return the updated screen, so a
 separate read_screen is rarely needed. Never unlock the phone or change security settings, and confirm with the
 user before sending a message or placing a call.`;
 
@@ -24,6 +26,7 @@ export function createPhoneServer(config: McpConfig, client: PhoneClient = new P
   registerInputTools(server, ctx);
   registerTextTools(server, ctx);
   registerAppTools(server, ctx);
+  registerShortcutTools(server, ctx);
   if (config.memoryFile) registerMemoryTools(server, config.memoryFile);
   return server;
 }

@@ -40,7 +40,16 @@ interface DeviceController {
     fun launch(pkg: String): Outcome
     fun intent(request: IntentRequest): Outcome
     fun media(action: MediaAction): Outcome
+
+    // Personal-data and shortcut endpoints. Defaults keep test fakes short; the real controller overrides them.
+    fun mediaState(): Outcome = NOT_IMPLEMENTED
+    fun playSearch(request: PlaySearchRequest): Outcome = NOT_IMPLEMENTED
+    fun notifications(pkg: String?): Outcome = NOT_IMPLEMENTED
+    fun contacts(query: String): Outcome = NOT_IMPLEMENTED
+    fun call(request: CallRequest): Outcome = NOT_IMPLEMENTED
 }
+
+private val NOT_IMPLEMENTED: Outcome = Outcome.Failure(501, "not_implemented")
 
 /** HTTP-agnostic routing of the device API (docs/protocol.md section 1). */
 class RouteHandler(
@@ -61,6 +70,11 @@ class RouteHandler(
         ("POST" to "/apps/launch") to { r -> controller.launch(RequestParser.launch(json(r))) },
         ("POST" to "/intent") to { r -> controller.intent(RequestParser.intent(json(r))) },
         ("POST" to "/media") to { r -> controller.media(RequestParser.media(json(r))) },
+        ("GET" to "/media/state") to { _ -> controller.mediaState() },
+        ("POST" to "/media/play_search") to { r -> controller.playSearch(RequestParser.playSearch(json(r))) },
+        ("GET" to "/notifications") to { r -> controller.notifications(RequestParser.notificationsPackage(r.query)) },
+        ("GET" to "/contacts") to { r -> controller.contacts(RequestParser.contactsQuery(r.query)) },
+        ("POST" to "/call") to { r -> controller.call(RequestParser.call(json(r))) },
     )
     private val knownPaths = routes.keys.map { it.second }.toSet()
 

@@ -1,3 +1,4 @@
+import { DeviceServices } from './services.ts';
 import { centerOf, clickableAncestor, flattenScreen, hitTest, type FlatScreen } from './tree.ts';
 import type { ApiResult, RecordedAction, Scenario, TapEffect, TreeNode } from './types.ts';
 import {
@@ -41,11 +42,14 @@ export class FakePhone {
   private recorded: RecordedAction[] = [];
   private mediaState: MediaState = { playing: false, volume: 7, track: 0 };
   accessibility = true;
+  /** Media sessions, notifications, contacts and calls; its permission switches trigger the 403 cases. */
+  readonly services: DeviceServices;
   private readonly routes: Readonly<Record<string, Handler>>;
 
   constructor(scenario: Scenario) {
     this.scenario = scenario;
     this.stack = [scenario.homeScreen];
+    this.services = new DeviceServices(scenario, (pkg) => this.open(pkg));
     this.routes = {
       'GET /health': () => this.health(),
       'GET /screen/tree': () => this.tree(),
@@ -60,6 +64,11 @@ export class FakePhone {
       'POST /apps/launch': (b) => this.launch(str(b, 'package')),
       'POST /intent': (b) => this.intent(b),
       'POST /media': (b) => this.media(b),
+      'GET /media/state': () => this.services.mediaState(),
+      'POST /media/play_search': (b) => this.services.playSearch(b),
+      'GET /notifications': (_b, q) => this.services.notifications(q),
+      'GET /contacts': (_b, q) => this.services.contacts(q),
+      'POST /call': (b) => this.services.call(b),
     };
   }
 
@@ -160,6 +169,7 @@ export class FakePhone {
   private applyEffect(effect: TapEffect | undefined): void {
     if (!effect) return;
     if ('launch' in effect) this.launch(effect.launch);
+    else if ('play' in effect) this.services.startPlaying(effect.play.package, effect.play.title, effect.play.artist);
     else this.goTo(effect.screen);
   }
 
@@ -207,11 +217,15 @@ export class FakePhone {
     return { status: 200, body: { apps } };
   }
 
-  private launch(pkg: string): ApiResult {
+  private open(pkg: string): boolean {
     const app = this.scenario.apps.find((a) => a.package === pkg);
-    if (!app) return ok(false);
+    if (!app) return false;
     this.stack = [...this.stack, app.screen];
-    return ok();
+    return true;
+  }
+
+  private launch(pkg: string): ApiResult {
+    return ok(this.open(pkg));
   }
 
   private intent(body: Body): ApiResult {
@@ -219,6 +233,11 @@ export class FakePhone {
     optStringMap(body, 'extras');
     const data = optStr(body, 'data');
     const pkg = optStr(body, 'package');
+    const deepLink = Object.entries(this.scenario.deepLinks ?? {}).find(([prefix]) => data?.startsWith(prefix));
+    if (deepLink) {
+      this.goTo(deepLink[1]);
+      return ok();
+    }
     const handlers = Object.entries(this.scenario.uriHandlers);
     const handler = pkg ?? handlers.find(([prefix]) => data?.startsWith(prefix))?.[1];
     if (!handler) return ok(false);

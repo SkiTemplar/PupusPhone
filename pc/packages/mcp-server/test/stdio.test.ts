@@ -17,7 +17,7 @@ describe('loadConfig', () => {
     expect(() => loadConfig({ PUPUS_PHONE_URL: 'ftp://x', PUPUS_PHONE_TOKEN: 't' })).toThrow(/http/);
     expect(() => loadConfig({ PUPUS_PHONE_URL: 'http://x:1', PUPUS_PHONE_TOKEN: 't', PUPUS_PHONE_TIMEOUT_MS: '-3' })).toThrow();
     const cfg = loadConfig({ PUPUS_PHONE_URL: 'http://100.64.0.2:8765/', PUPUS_PHONE_TOKEN: 't' });
-    expect(cfg).toEqual({ phoneUrl: 'http://100.64.0.2:8765', token: 't', timeoutMs: 8000, settleMs: 700 });
+    expect(cfg).toEqual({ phoneUrl: 'http://100.64.0.2:8765', token: 't', timeoutMs: 8000, settleMs: 700, defaultCountryCode: '34' });
   });
 });
 

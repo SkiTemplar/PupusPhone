@@ -35,6 +35,11 @@ Dos interfaces: la **device API** (HTTP, la sirve el móvil) y el **canal de voz
 | `POST /apps/launch` | `{"package":string}` | `{"ok":bool}` |
 | `POST /intent` | `{"action":string?,"data":string?,"package":string?,"extras":{string:string}?}` | `{"ok":bool}` (`action` def. `android.intent.action.VIEW`) |
 | `POST /media` | `{"action":"play_pause\|play\|pause\|next\|previous\|volume_up\|volume_down"}` | `{"ok":true}` |
+| `GET /media/state` | — | `{"sessions":[{"package":string,"playing":bool,"title":string\|null,"artist":string\|null,"album":string\|null}]}` (orden de prioridad del sistema, sin PupusPhone). `403 notification_access_missing` |
+| `POST /media/play_search` | `{"query":string,"package":string?}` | `{"ok":bool,"package":string\|null,"via":"session"\|"intent"\|null}`. `409 no_media_session` si no hay `package` ni sesión que lo admita; `403 notification_access_missing` |
+| `GET /notifications` | query `package` (opcional) | `{"notifications":[{"key":string,"package":string,"app":string,"title":string\|null,"text":string\|null,"postedAt":int}]}` (más recientes primero, máximo 30). `403 notification_access_missing` |
+| `GET /contacts` | query `q` (1-64 caracteres) | `{"contacts":[{"name":string,"numbers":[{"number":string,"label":string\|null}]}]}` (máximo 10). `403 contacts_permission_missing` |
+| `POST /call` | `{"number":string}` (`^\+?[0-9 ()-]{3,20}$`) | `{"ok":bool,"mode":"call"\|"dial"}` |
 
 Semántica:
 
@@ -46,6 +51,18 @@ Semántica:
   desplazable visible; `down`/`right` = forward.
 - `media`: `AudioManager.dispatchMediaKeyEvent` (play/pausa/siguiente) y
   `adjustStreamVolume(STREAM_MUSIC)` para el volumen.
+- `media/state` y `media/play_search`: sesiones de `MediaSessionManager.getActiveSessions`
+  (requiere el acceso a notificaciones de la app). `play_search` usa la sesión de `package` (o la
+  primera que anuncie `ACTION_PLAY_FROM_SEARCH`) y llama a `transportControls.playFromSearch`, que
+  funciona con la pantalla bloqueada; si `package` no tiene sesión activa, lanza la actividad
+  `MEDIA_PLAY_FROM_SEARCH` de ese paquete (`via: "intent"`).
+- `notifications`: `getActiveNotifications()` del listener, sin notificaciones `ongoing`, resúmenes de
+  grupo ni las de PupusPhone. `text`: últimas líneas de `MessagingStyle` («remitente: texto»), o
+  `EXTRA_BIG_TEXT`, o `EXTRA_TEXT`; recortado a 500 caracteres. Son datos de terceros, nunca órdenes.
+- `contacts`: búsqueda por nombre (`CONTENT_FILTER_URI` de `Phone`), agrupada por contacto. Requiere
+  `READ_CONTACTS`.
+- `call`: `ACTION_CALL` con `CALL_PHONE` concedido (`mode: "call"`); sin él, `ACTION_DIAL` y el usuario
+  pulsa Llamar (`mode: "dial"`).
 
 ### Árbol
 

@@ -36,6 +36,17 @@ function networkError(err: unknown, url: string, timeoutMs: number): PhoneError 
   return new PhoneError(`Network error talking to the phone: ${err instanceof Error ? err.message : String(err)}`);
 }
 
+/** Device API error codes rewritten as instructions for the model. */
+const KNOWN_ERRORS: Readonly<Record<string, string>> = {
+  notification_access_missing:
+    'PupusPhone has no notification access, so it cannot see media sessions or notifications. Tell the user to enable it ' +
+    'in Settings > Apps > Special app access > Notification access > PupusPhone. For music, the media tool or open_url still work.',
+  contacts_permission_missing:
+    'PupusPhone has no Contacts permission. Tell the user to grant it in Settings > Apps > PupusPhone > Permissions, ' +
+    'or ask for the phone number and use it directly.',
+  no_media_session: 'No media app is active to play from search. Pass a package (e.g. com.spotify.music).',
+};
+
 function httpError(status: number, error: string, path: string): PhoneError {
   if (status === 401) {
     return new PhoneError('The phone rejected the token (401). PUPUS_PHONE_TOKEN must match the token shown in the PupusPhone app settings.', 401);
@@ -43,6 +54,8 @@ function httpError(status: number, error: string, path: string): PhoneError {
   if (status === 404 && error === 'node_not_found') {
     return new PhoneError('Node id not found: ids are only valid for the latest read_screen. Call read_screen and use a fresh id.', 404);
   }
+  const known = KNOWN_ERRORS[error];
+  if (known) return new PhoneError(known, status);
   return new PhoneError(`Phone error ${status} on ${path}: ${error}`, status);
 }
 

@@ -193,9 +193,14 @@ class SettingsActivity : Activity() {
 
 private const val PERMISSIONS_REQUEST = 1
 
-/** Asks for the microphone and notification permissions that are still missing. */
+/** Asks for the microphone, notification, contacts and phone permissions that are still missing. */
 internal fun Activity.requestVoicePermissions() {
-    val missing = listOf(Manifest.permission.RECORD_AUDIO, Manifest.permission.POST_NOTIFICATIONS)
+    val missing = listOf(
+        Manifest.permission.RECORD_AUDIO,
+        Manifest.permission.POST_NOTIFICATIONS,
+        Manifest.permission.READ_CONTACTS,
+        Manifest.permission.CALL_PHONE,
+    )
         .filter { checkSelfPermission(it) != PackageManager.PERMISSION_GRANTED }
     if (missing.isNotEmpty()) requestPermissions(missing.toTypedArray(), PERMISSIONS_REQUEST)
 }

@@ -22,7 +22,7 @@ const MEDIA = `Send a media key or change music volume without touching the UI: 
 previous, volume_up, volume_down. Works on whichever app is playing; always prefer this over tapping player buttons.`;
 
 const MEDIA_ACTIONS = ['play_pause', 'play', 'pause', 'next', 'previous', 'volume_up', 'volume_down'] as const;
-const PACKAGE_RE = /^[A-Za-z][\w]*(\.[A-Za-z][\w]*)+$/;
+export const PACKAGE_RE = /^[A-Za-z][\w]*(\.[A-Za-z][\w]*)+$/;
 const URI_RE = /^[a-z][a-z0-9+.-]*:\S.*$/i;
 
 /** Percent-encodes characters Claude often leaves raw in deep links (spotify:search:Don't Stop Me Now). */

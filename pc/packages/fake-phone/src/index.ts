@@ -6,6 +6,7 @@ import { defaultScenario } from './scenario.ts';
 import type { ApiResult, Scenario } from './types.ts';
 
 export { FakePhone } from './phone.ts';
+export { DeviceServices } from './services.ts';
 export { defaultScenario } from './scenario.ts';
 export { flattenScreen } from './tree.ts';
 export type * from './types.ts';

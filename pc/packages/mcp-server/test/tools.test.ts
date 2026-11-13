@@ -4,8 +4,9 @@ import { startFakePhone, type RunningFakePhone } from '@pupusphone/fake-phone';
 import { call, connect, idOf, textOf, TOKEN, type Connected } from './helpers.ts';
 
 const EXPECTED_TOOLS = [
-  'launch_app', 'list_apps', 'long_press', 'media', 'open_url', 'press', 'read_screen',
-  'screenshot', 'scroll', 'scroll_to_text', 'swipe', 'tap', 'tap_text', 'type_text', 'wait', 'wait_for_text',
+  'call', 'find_contact', 'launch_app', 'list_apps', 'long_press', 'media', 'navigate', 'now_playing', 'open_url',
+  'play_music', 'press', 'read_notifications', 'read_screen', 'screenshot', 'scroll', 'scroll_to_text', 'swipe', 'tap',
+  'tap_text', 'type_text', 'wait', 'wait_for_text', 'whatsapp_send',
 ];
 
 let fake: RunningFakePhone;

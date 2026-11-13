@@ -7,10 +7,31 @@ import android.service.notification.NotificationListenerService
 import android.util.Log
 
 /**
- * Enabled only so [MediaSessionManager.getActiveSessions] lets this app see the other media
- * sessions; it does not read or act on notifications.
+ * Notification access of the app. It lets [MediaSessionManager.getActiveSessions] see the other
+ * media sessions, and the device API reads the active notifications through the bound instance
+ * ([connected]) when the assistant is asked for them. It never acts on notifications.
  */
-class MusicNotificationListener : NotificationListenerService()
+class MusicNotificationListener : NotificationListenerService() {
+    override fun onListenerConnected() {
+        connected = this
+    }
+
+    override fun onListenerDisconnected() {
+        if (connected === this) connected = null
+    }
+
+    override fun onDestroy() {
+        if (connected === this) connected = null
+        super.onDestroy()
+    }
+
+    companion object {
+        /** The bound listener, or null while the system has it unbound. */
+        @Volatile
+        var connected: MusicNotificationListener? = null
+            private set
+    }
+}
 
 /**
  * The "Música" action of the car card: resumes the most recent other media app (Spotify, YouTube

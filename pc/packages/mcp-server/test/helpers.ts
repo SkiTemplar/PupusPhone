@@ -13,7 +13,7 @@ export interface Connected {
 
 /** Connects a real MCP client to the phone server over an in-memory transport pair. */
 export async function connect(config: Partial<McpConfig> & Pick<McpConfig, 'phoneUrl'>): Promise<Connected> {
-  const server = createPhoneServer({ token: TOKEN, timeoutMs: 2000, settleMs: 5, ...config });
+  const server = createPhoneServer({ token: TOKEN, timeoutMs: 2000, settleMs: 5, defaultCountryCode: '34', ...config });
   const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
   const client = new Client({ name: 'test', version: '0.0.0' });
   await Promise.all([server.connect(serverTransport), client.connect(clientTransport)]);

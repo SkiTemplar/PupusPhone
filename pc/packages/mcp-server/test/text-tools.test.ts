@@ -154,7 +154,7 @@ async function connectStub(phone: PhoneClient, config: McpConfig): Promise<Clien
 }
 
 describe('scroll_to_text with a paged list', () => {
-  const config: McpConfig = { phoneUrl: 'http://127.0.0.1:1', token: TOKEN, timeoutMs: 1000, settleMs: 1 };
+  const config: McpConfig = { phoneUrl: 'http://127.0.0.1:1', token: TOKEN, timeoutMs: 1000, settleMs: 1, defaultCountryCode: '34' };
   const pages = [['Uno', 'Dos'], ['Tres', 'Cuatro'], ['Canción final', 'Fin']];
 
   it('scrolls the first scrollable until the text appears', async () => {

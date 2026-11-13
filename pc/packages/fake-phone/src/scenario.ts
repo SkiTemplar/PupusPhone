@@ -90,6 +90,29 @@ const spotifySearch: NodeDef = {
   ],
 };
 
+/** Results of a spotify:search: deep link, laid out like the real app (top result row, resId "title"). */
+const spotifyResults: NodeDef = {
+  cls: 'FrameLayout',
+  bounds: [0, 0, W, H],
+  children: [
+    statusBar(),
+    { cls: 'ImageButton', desc: 'Cancel', bounds: [0, 120, 150, 240], flags: ['clickable'] },
+    { cls: 'EditText', text: 'Bohemian Rhapsody Queen', bounds: [150, 120, 900, 240], flags: ['editable'] },
+    { cls: 'TextView', text: 'Songs', bounds: [40, 280, 200, 340], flags: ['clickable'] },
+    {
+      cls: 'LinearLayout',
+      bounds: [0, 400, W, 560],
+      flags: ['clickable'],
+      onTap: { play: { package: 'com.spotify.music', title: 'Bohemian Rhapsody', artist: 'Queen' } },
+      children: [
+        { cls: 'TextView', text: 'Bohemian Rhapsody', resId: 'title', bounds: [200, 410, 900, 470] },
+        { cls: 'TextView', text: 'Song • Queen', resId: 'subtitle', bounds: [200, 480, 900, 540] },
+      ],
+    },
+    { cls: 'TextView', text: 'Another One Bites The Dust', resId: 'title', bounds: [200, 900, 900, 960] },
+  ],
+};
+
 const whatsappChats: NodeDef = {
   cls: 'FrameLayout',
   bounds: [0, 0, W, H],
@@ -136,6 +159,50 @@ const maps: NodeDef = {
   ],
 };
 
+/** Chat opened by a wa.me deep link: text field prefilled, send button described as "Enviar". */
+const whatsappChat: NodeDef = {
+  cls: 'FrameLayout',
+  bounds: [0, 0, W, H],
+  children: [
+    statusBar(),
+    { cls: 'TextView', text: 'Chat', resId: 'conversation_contact_name', bounds: [200, 100, 700, 200] },
+    { cls: 'ImageButton', desc: 'Adjuntar', resId: 'input_attach_button', bounds: [700, 2200, 820, 2320], flags: ['clickable'] },
+    { cls: 'EditText', resId: 'entry', bounds: [40, 2200, 690, 2320], flags: ['clickable', 'editable', 'focused'] },
+    { cls: 'ImageButton', desc: 'Enviar', resId: 'send', bounds: [940, 2200, 1060, 2320], flags: ['clickable'] },
+  ],
+};
+
+const youtubeMusic: NodeDef = {
+  cls: 'FrameLayout',
+  bounds: [0, 0, W, H],
+  children: [statusBar(), { cls: 'TextView', text: 'Inicio', resId: 'title', bounds: [40, 120, 700, 200] }],
+};
+
+const MEDIA_SESSIONS: Scenario['mediaSessions'] = [
+  { package: 'com.google.android.apps.podcasts', playing: true, title: 'Un tema al día', artist: 'elDiario.es', album: null },
+  {
+    package: 'com.spotify.music',
+    playing: false,
+    title: 'Bohemian Rhapsody',
+    artist: 'Queen',
+    album: 'A Night at the Opera',
+    supportsSearch: true,
+  },
+];
+
+const NOTIFICATIONS: Scenario['notifications'] = [
+  { key: 'n1', package: 'com.whatsapp', app: 'WhatsApp', title: 'Mamá', text: '¿Llegas a cenar?', minutesAgo: 3 },
+  { key: 'n2', package: 'com.google.android.gm', app: 'Gmail', title: 'Factura de la luz', text: 'Tu factura de noviembre ya está disponible', minutesAgo: 25 },
+  { key: 'n3', package: 'com.whatsapp', app: 'WhatsApp', title: 'Fútbol', text: 'Javi: mañana a las 8\nLaura: vale', minutesAgo: 90 },
+];
+
+const CONTACTS: Scenario['contacts'] = [
+  { name: 'Papá', numbers: [{ number: '+34 612 345 678', label: 'Móvil' }] },
+  { name: 'Mamá', numbers: [{ number: '91 555 12 34', label: 'Casa' }, { number: '600 11 22 33', label: 'Móvil' }] },
+  { name: 'Javi Pérez', numbers: [{ number: '+34 655 000 111', label: 'Mobile' }] },
+  { name: 'Javier López', numbers: [{ number: '677 888 999', label: null }] },
+];
+
 /** Default scenario: launcher with four apps; Spotify has a home and a search screen. */
 export function defaultScenario(): Scenario {
   return {
@@ -145,16 +212,24 @@ export function defaultScenario(): Scenario {
       launcher: { package: 'com.google.android.apps.nexuslauncher', root: launcher },
       spotify: { package: 'com.spotify.music', root: spotifyHome },
       'spotify-search': { package: 'com.spotify.music', root: spotifySearch },
+      'spotify-results': { package: 'com.spotify.music', root: spotifyResults },
       whatsapp: { package: 'com.whatsapp', root: whatsappChats },
       dialer: { package: 'com.google.android.dialer', root: dialer },
       maps: { package: 'com.google.android.apps.maps', root: maps },
+      'whatsapp-chat': { package: 'com.whatsapp', root: whatsappChat },
+      'youtube-music': { package: 'com.google.android.apps.youtube.music', root: youtubeMusic },
     },
     apps: [
       { package: 'com.spotify.music', label: 'Spotify', screen: 'spotify' },
       { package: 'com.whatsapp', label: 'WhatsApp', screen: 'whatsapp' },
       { package: 'com.google.android.dialer', label: 'Teléfono', screen: 'dialer' },
       { package: 'com.google.android.apps.maps', label: 'Maps', screen: 'maps' },
+      { package: 'com.google.android.apps.youtube.music', label: 'YouTube Music', screen: 'youtube-music' },
     ],
+    deepLinks: { 'https://wa.me/': 'whatsapp-chat', 'spotify:search:': 'spotify-results' },
+    mediaSessions: MEDIA_SESSIONS,
+    notifications: NOTIFICATIONS,
+    contacts: CONTACTS,
     uriHandlers: {
       'spotify:': 'com.spotify.music',
       'whatsapp:': 'com.whatsapp',

@@ -27,6 +27,11 @@ private class FakeController : DeviceController {
     override fun launch(pkg: String) = record("launch:$pkg")
     override fun intent(request: IntentRequest) = record(request)
     override fun media(action: MediaAction) = record(action)
+    override fun mediaState() = record("mediaState")
+    override fun playSearch(request: PlaySearchRequest) = record(request)
+    override fun notifications(pkg: String?) = record("notifications:$pkg")
+    override fun contacts(query: String) = record("contacts:$query")
+    override fun call(request: CallRequest) = record(request)
 }
 
 class RouteHandlerTest {
@@ -51,6 +56,42 @@ class RouteHandlerTest {
         assertTrue(handler.isAuthorized("Bearer $token"))
         assertEquals(false, handler.isAuthorized(null))
         assertEquals(false, handler.isAuthorized("Bearer nope"))
+    }
+
+    @Test
+    fun shortcutRoutesParseTheirInput() {
+        assertEquals(200, call("GET", "/media/state").status)
+        call("POST", "/media/play_search", """{"query":" Queen ","package":"com.spotify.music"}""")
+        call("POST", "/media/play_search", """{"query":"Queen"}""")
+        call("GET", "/notifications", query = mapOf("package" to "com.whatsapp"))
+        call("GET", "/notifications")
+        call("GET", "/contacts", query = mapOf("q" to " Papá "))
+        call("POST", "/call", """{"number":"+34 612 345 678"}""")
+        assertEquals(
+            listOf(
+                "mediaState",
+                PlaySearchRequest("Queen", "com.spotify.music"),
+                PlaySearchRequest("Queen", null),
+                "notifications:com.whatsapp",
+                "notifications:null",
+                "contacts:Papá",
+                CallRequest("+34 612 345 678"),
+            ),
+            controller.calls,
+        )
+    }
+
+    @Test
+    fun shortcutRoutesRejectBadInput() {
+        assertEquals(400, call("POST", "/media/play_search", """{"query":""}""").status)
+        assertEquals(400, call("POST", "/media/play_search", """{"query":"x","package":"spotify; rm"}""").status)
+        assertEquals(400, call("POST", "/media/play_search", """{"query":"${"x".repeat(201)}"}""").status)
+        assertEquals(400, call("GET", "/notifications", query = mapOf("package" to "../etc")).status)
+        assertEquals(400, call("GET", "/contacts").status)
+        assertEquals(400, call("GET", "/contacts", query = mapOf("q" to "x".repeat(65))).status)
+        assertEquals(400, call("POST", "/call", """{"number":"*#06#"}""").status)
+        assertEquals(400, call("POST", "/call", """{"number":"12"}""").status)
+        assertTrue(controller.calls.isEmpty())
     }
 
     @Test

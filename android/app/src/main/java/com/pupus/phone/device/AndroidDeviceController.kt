@@ -11,9 +11,11 @@ import android.view.accessibility.AccessibilityWindowInfo
 import com.pupus.phone.BuildConfig
 import com.pupus.phone.api.DeviceController
 import com.pupus.phone.api.GlobalActionName
+import com.pupus.phone.api.CallRequest
 import com.pupus.phone.api.IntentRequest
 import com.pupus.phone.api.LongPressRequest
 import com.pupus.phone.api.MediaAction
+import com.pupus.phone.api.PlaySearchRequest
 import com.pupus.phone.api.Outcome
 import com.pupus.phone.api.ScrollRequest
 import com.pupus.phone.api.ShotParams
@@ -34,6 +36,9 @@ class AndroidDeviceController(private val service: AccessibilityService) : Devic
     private val gestures = Gestures(service)
     private val capture = ScreenCapture(service)
     private val system = SystemActions(service)
+    private val mediaSessions = MediaSessions(service)
+    private val notificationReader = NotificationReader(service)
+    private val phone = PhoneActions(service)
 
     @Volatile
     private var snapshot: TreeSnapshot = TreeSnapshot.EMPTY
@@ -132,6 +137,11 @@ class AndroidDeviceController(private val service: AccessibilityService) : Devic
     override fun launch(pkg: String): Outcome = system.launch(pkg)
     override fun intent(request: IntentRequest): Outcome = system.intent(request)
     override fun media(action: MediaAction): Outcome = system.media(action)
+    override fun mediaState(): Outcome = mediaSessions.state()
+    override fun playSearch(request: PlaySearchRequest): Outcome = mediaSessions.playSearch(request)
+    override fun notifications(pkg: String?): Outcome = notificationReader.read(pkg)
+    override fun contacts(query: String): Outcome = phone.contacts(query)
+    override fun call(request: CallRequest): Outcome = phone.call(request)
 
     /** Roots of all interactive windows except our own overlay; falls back to the active window. */
     private fun roots(): List<A11yNode> {
