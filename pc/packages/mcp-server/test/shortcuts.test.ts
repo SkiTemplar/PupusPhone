@@ -2,7 +2,9 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { defaultScenario, flattenScreen, startFakePhone, type RunningFakePhone, type Scenario } from '@pupusphone/fake-phone';
 import { ConfigError, loadConfig } from '../src/config.ts';
 import { chooseContact, pickNumber, toInternational } from '../src/contacts.ts';
+import { previewDestination, startButton } from '../src/tools/maps.ts';
 import { age } from '../src/tools/shortcuts.ts';
+import type { ScreenTree, TreeNode } from '../src/types.ts';
 import { call, connect, textOf, TOKEN, type Connected } from './helpers.ts';
 
 let fake: RunningFakePhone;
@@ -196,15 +198,26 @@ describe('navigate', () => {
   beforeEach(() => start());
   afterEach(() => stop());
 
-  it('starts Google Maps navigation with an encoded destination and mode', async () => {
-    const out = textOf(await call(mcp.client, 'navigate', { destination: 'Calle Mayor 5, Madrid', mode: 'walking' }));
-    expect(out).toBe('ok: navigating to Calle Mayor 5, Madrid (walking) in Google Maps');
-    await call(mcp.client, 'navigate', { destination: 'Toledo' });
+  it('opens the route preview, reports the place Maps resolved and taps Start', async () => {
+    const out = textOf(await call(mcp.client, 'navigate', { destination: 'Puerta del Sol, Madrid', mode: 'walking' }));
+    expect(out).toMatch(/^ok: navigating to "Puerta del Sol" as resolved by Google Maps \(walking\)/);
     expect(bodies('POST', '/intent')).toEqual([
-      { data: 'google.navigation:q=Calle%20Mayor%205%2C%20Madrid&mode=w', package: 'com.google.android.apps.maps' },
-      { data: 'google.navigation:q=Toledo', package: 'com.google.android.apps.maps' },
+      { data: 'https://www.google.com/maps/dir/?api=1&destination=Puerta%20del%20Sol%2C%20Madrid&travelmode=walking', package: 'com.google.android.apps.maps' },
     ]);
+    expect(fake.phone.requests('POST', '/input/tap')).toHaveLength(1);
     expect(fake.phone.currentScreen).toBe('maps');
+  });
+
+  it('starts navigation directly, unverified, when the preview cannot be read', async () => {
+    await stop();
+    await start({ ...defaultScenario(), deepLinks: {} });
+    const out = textOf(await call(mcp.client, 'navigate', { destination: 'Toledo' }));
+    expect(out).toMatch(/started \(driving\), destination not verified/);
+    expect(bodies('POST', '/intent').map((b) => (b as { data: string }).data)).toEqual([
+      'https://www.google.com/maps/dir/?api=1&destination=Toledo&travelmode=driving',
+      'https://www.google.com/maps/dir/?api=1&destination=Toledo&travelmode=driving&dir_action=navigate',
+    ]);
+    expect(fake.phone.requests('POST', '/input/tap')).toHaveLength(0);
   });
 });
 
@@ -237,5 +250,29 @@ describe('pure helpers', () => {
     expect(loadConfig({ ...base, PUPUS_DEFAULT_COUNTRY_CODE: '1' }).defaultCountryCode).toBe('1');
     expect(() => loadConfig({ ...base, PUPUS_DEFAULT_COUNTRY_CODE: '+34' })).toThrow(ConfigError);
     expect(() => loadConfig({ ...base, PUPUS_DEFAULT_COUNTRY_CODE: '12345' })).toThrow(ConfigError);
+  });
+});
+
+describe('maps preview parsing', () => {
+  const node = (id: number, parent: number, bounds: [number, number, number, number], extra: Partial<TreeNode>): TreeNode => ({
+    id, parent, cls: 'TextView', text: null, desc: null, resId: null, bounds, flags: [], ...extra,
+  });
+
+  it('ignores a heads-up notification lying on the destination row (separate window)', () => {
+    const tree: ScreenTree = {
+      package: 'com.google.android.apps.maps',
+      screen: { width: 1280, height: 2772 },
+      nodes: [
+        node(0, -1, [0, 300, 1280, 500], { cls: 'FrameLayout' }),
+        node(1, 0, [40, 360, 800, 440], { text: 'Donde estas? Mmm' }),
+        node(2, -1, [0, 0, 1280, 2772], { cls: 'FrameLayout' }),
+        node(3, 2, [176, 218, 506, 293], { text: 'Your location' }),
+        node(4, 2, [176, 375, 523, 450], { text: 'Puerta del Sol' }),
+        node(5, 2, [1059, 334, 1215, 490], { desc: 'Swap start and destination', flags: ['clickable'] }),
+        node(6, 2, [65, 2558, 347, 2714], { cls: 'Button', text: 'Start', flags: ['clickable'] }),
+      ],
+    };
+    expect(previewDestination(tree)).toBe('Puerta del Sol');
+    expect(startButton(tree)?.id).toBe(6);
   });
 });

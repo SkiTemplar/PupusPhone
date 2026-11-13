@@ -113,6 +113,20 @@ const spotifyResults: NodeDef = {
   ],
 };
 
+/** Route preview opened by a maps/dir URL, laid out like the real app (no resource ids). */
+const mapsRoute: NodeDef = {
+  cls: 'FrameLayout',
+  bounds: [0, 0, W, H],
+  children: [
+    statusBar(),
+    { cls: 'TextView', text: 'Your location', bounds: [176, 218, 506, 293] },
+    { cls: 'TextView', text: 'Puerta del Sol', bounds: [176, 375, 523, 450] },
+    { cls: 'FrameLayout', desc: 'Swap start and destination', bounds: [900, 334, 1040, 490], flags: ['clickable'] },
+    { cls: 'TextView', text: 'Crash on A-1', bounds: [40, 600, 700, 660] },
+    { cls: 'Button', text: 'Start', bounds: [65, 2100, 347, 2250], flags: ['clickable'], onTap: { screen: 'maps' } },
+  ],
+};
+
 const whatsappChats: NodeDef = {
   cls: 'FrameLayout',
   bounds: [0, 0, W, H],
@@ -213,6 +227,7 @@ export function defaultScenario(): Scenario {
       spotify: { package: 'com.spotify.music', root: spotifyHome },
       'spotify-search': { package: 'com.spotify.music', root: spotifySearch },
       'spotify-results': { package: 'com.spotify.music', root: spotifyResults },
+      'maps-route': { package: 'com.google.android.apps.maps', root: mapsRoute },
       whatsapp: { package: 'com.whatsapp', root: whatsappChats },
       dialer: { package: 'com.google.android.dialer', root: dialer },
       maps: { package: 'com.google.android.apps.maps', root: maps },
@@ -226,7 +241,7 @@ export function defaultScenario(): Scenario {
       { package: 'com.google.android.apps.maps', label: 'Maps', screen: 'maps' },
       { package: 'com.google.android.apps.youtube.music', label: 'YouTube Music', screen: 'youtube-music' },
     ],
-    deepLinks: { 'https://wa.me/': 'whatsapp-chat', 'spotify:search:': 'spotify-results' },
+    deepLinks: { 'https://wa.me/': 'whatsapp-chat', 'spotify:search:': 'spotify-results', 'https://www.google.com/maps/dir/': 'maps-route' },
     mediaSessions: MEDIA_SESSIONS,
     notifications: NOTIFICATIONS,
     contacts: CONTACTS,
