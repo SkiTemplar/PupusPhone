@@ -6,6 +6,8 @@ export interface McpConfig {
   readonly timeoutMs: number;
   /** Delay before re-reading the screen after an action when `observe` is true. */
   readonly settleMs: number;
+  /** JSON file for the remember/forget tools (PUPUS_MEMORY_FILE); unset = memory tools disabled. */
+  readonly memoryFile?: string | undefined;
 }
 
 export class ConfigError extends Error {
@@ -42,5 +44,6 @@ export function loadConfig(env: Readonly<Record<string, string | undefined>> = p
     token,
     timeoutMs: positiveInt(env['PUPUS_PHONE_TIMEOUT_MS'], 8000, 'PUPUS_PHONE_TIMEOUT_MS'),
     settleMs: positiveInt(env['PUPUS_SETTLE_MS'], 700, 'PUPUS_SETTLE_MS'),
+    memoryFile: env['PUPUS_MEMORY_FILE'] || undefined,
   };
 }

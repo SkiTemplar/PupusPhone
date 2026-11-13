@@ -31,6 +31,17 @@ describe('loadBridgeConfig', () => {
   });
 });
 
+describe('memory paths', () => {
+  it('default to ~/.pupusphone, accept a path and turn off with an empty string', () => {
+    const def = loadBridgeConfig(BASE);
+    expect(def.memoryFile).toMatch(/[\\/]\.pupusphone[\\/]memory\.json$/);
+    expect(def.profileFile).toMatch(/[\\/]\.pupusphone[\\/]profile\.md$/);
+    const custom = loadBridgeConfig({ ...BASE, PUPUS_MEMORY_FILE: '/x/m.json', PUPUS_PROFILE_FILE: '' });
+    expect(custom.memoryFile).toBe('/x/m.json');
+    expect(custom.profileFile).toBeUndefined();
+  });
+});
+
 describe('claude launch', () => {
   it('runs script binaries through node and appends --resume', () => {
     const cfg = loadBridgeConfig({ ...BASE, PUPUS_CLAUDE_BIN: '/x/fake.mjs' });

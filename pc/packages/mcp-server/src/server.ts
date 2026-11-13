@@ -4,6 +4,7 @@ import { PhoneClient } from './phone-client.ts';
 import { registerAppTools } from './tools/apps.ts';
 import type { ToolContext } from './tools/context.ts';
 import { registerInputTools } from './tools/input.ts';
+import { registerMemoryTools } from './tools/memory.ts';
 import { registerScreenTools } from './tools/screen.ts';
 import { registerTextTools } from './tools/text.ts';
 
@@ -23,5 +24,6 @@ export function createPhoneServer(config: McpConfig, client: PhoneClient = new P
   registerInputTools(server, ctx);
   registerTextTools(server, ctx);
   registerAppTools(server, ctx);
+  if (config.memoryFile) registerMemoryTools(server, config.memoryFile);
   return server;
 }

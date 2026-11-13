@@ -1,4 +1,5 @@
 import { tmpdir } from 'node:os';
+import { defaultMemoryDir } from 'pupusphone-mcp/memory';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -17,6 +18,10 @@ export interface BridgeConfig {
   /** Entry point of the MCP server spawned by Claude Code. */
   readonly mcpEntry: string;
   readonly systemPromptFile: string;
+  /** Memory facts (remember/forget); undefined disables memory. Default ~/.pupusphone/memory.json. */
+  readonly memoryFile: string | undefined;
+  /** Hand-written user profile appended to the prompt; undefined disables it. Default ~/.pupusphone/profile.md. */
+  readonly profileFile: string | undefined;
   readonly turnTimeoutMs: number;
   readonly interruptTimeoutMs: number;
   /** Seconds without any phone connected before the bridge exits; 0 keeps it running (PC default). */
@@ -51,6 +56,13 @@ function required(env: Env, key: string, hint: string): string {
   return value;
 }
 
+/** Unset → default path; empty string → disabled; anything else → that path. */
+function optionalPath(env: Env, key: string, fallback: string): string | undefined {
+  const value = env[key];
+  if (value === undefined) return fallback;
+  return value === '' ? undefined : value;
+}
+
 function defaultPath(relative: string): string {
   return fileURLToPath(new URL(relative, import.meta.url));
 }
@@ -75,6 +87,8 @@ export function loadBridgeConfig(env: Env = process.env): BridgeConfig {
     phoneToken: required(env, 'PUPUS_PHONE_TOKEN', 'token shown in the PupusPhone app settings'),
     mcpEntry: env['PUPUS_MCP_ENTRY'] || defaultPath('../../mcp-server/src/cli.ts'),
     systemPromptFile: env['PUPUS_SYSTEM_PROMPT_FILE'] || defaultPath('../prompts/voice-system-prompt.md'),
+    memoryFile: optionalPath(env, 'PUPUS_MEMORY_FILE', join(defaultMemoryDir(), 'memory.json')),
+    profileFile: optionalPath(env, 'PUPUS_PROFILE_FILE', join(defaultMemoryDir(), 'profile.md')),
     turnTimeoutMs: int(env, 'PUPUS_TURN_TIMEOUT_MS', 120_000, 1000, 600_000),
     interruptTimeoutMs: int(env, 'PUPUS_INTERRUPT_TIMEOUT_MS', 3000, 100, 60_000),
     idleExitSeconds: int(env, 'PUPUS_IDLE_EXIT_SECONDS', 0, 0, 86_400),

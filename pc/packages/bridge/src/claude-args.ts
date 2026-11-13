@@ -59,7 +59,12 @@ export function writeMcpConfig(config: BridgeConfig): string {
         type: 'stdio',
         command: resolveNodeBin(),
         args: [config.mcpEntry],
-        env: { PUPUS_PHONE_URL: config.phoneUrl, PUPUS_PHONE_TOKEN: config.phoneToken, PUPUS_LOG_LEVEL: 'warn' },
+        env: {
+          PUPUS_PHONE_URL: config.phoneUrl,
+          PUPUS_PHONE_TOKEN: config.phoneToken,
+          PUPUS_LOG_LEVEL: 'warn',
+          ...(config.memoryFile ? { PUPUS_MEMORY_FILE: config.memoryFile } : {}),
+        },
       },
     },
   };

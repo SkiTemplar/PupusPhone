@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { readFileSync, rmSync } from 'node:fs';
+import { readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { eventually, startTestBridge, VoiceClient, type TestBridge } from './ws-helpers.ts';
 
@@ -135,6 +135,49 @@ describe('interruption', () => {
     await phone.waitDone('deaf');
     await phone.waitFor((f) => f.type === 'ready', 5000, phone.after('deaf'));
     expect((await spawns(2))[1]).toMatch(/^resume fake-\d+$/);
+    phone.send({ type: 'utterance', id: 'after', text: 'pon música' });
+    await phone.waitDone('after');
+  });
+});
+
+describe('memory', () => {
+  const promptOf = (): string => {
+    const args = JSON.parse(tb.readFile('args.json')) as string[];
+    return args[args.indexOf('--system-prompt') + 1] ?? '';
+  };
+
+  it('passes the memory file to the MCP server and lists no facts on a fresh memory', async () => {
+    await spawns(1);
+    const mcp = JSON.parse(tb.readFile('mcp-config.json'));
+    expect(mcp.mcpServers.phone.env.PUPUS_MEMORY_FILE).toBe(join(tb.workdir, 'memory.json'));
+    expect(promptOf()).toContain('Recuerdos guardados: ninguno');
+  });
+
+  it('a respawn injects the profile and the facts saved meanwhile', async () => {
+    await spawns(1);
+    writeFileSync(join(tb.workdir, 'profile.md'), '- Se llama Rodrigo');
+    writeFileSync(
+      join(tb.workdir, 'memory.json'),
+      JSON.stringify({ version: 1, entries: [{ id: 7, text: 'Su padre está guardado como Papá', createdAt: '2026-11-13T10:00:00Z' }] }),
+    );
+    const mark = phone.frames.length;
+    phone.send({ type: 'reset' });
+    await phone.waitFor((f) => f.type === 'ready', 5000, mark);
+    const prompt = await eventually(promptOf, (p) => p.includes('7: '));
+    expect(prompt).toContain('manos libres');
+    expect(prompt).toContain('- Se llama Rodrigo');
+    expect(prompt).toContain('7: Su padre está guardado como Papá');
+  });
+
+  it('a corrupt memory file is left out without stopping the assistant', async () => {
+    await spawns(1);
+    writeFileSync(join(tb.workdir, 'memory.json'), '{ broken');
+    const mark = phone.frames.length;
+    phone.send({ type: 'reset' });
+    await phone.waitFor((f) => f.type === 'ready', 5000, mark);
+    await spawns(2);
+    const prompt = await eventually(promptOf, (p) => p.includes('Memoria'));
+    expect(prompt).toContain('Recuerdos guardados: ninguno');
     phone.send({ type: 'utterance', id: 'after', text: 'pon música' });
     await phone.waitDone('after');
   });

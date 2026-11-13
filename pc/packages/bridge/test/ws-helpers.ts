@@ -27,6 +27,9 @@ export async function startTestBridge(env: Record<string, string> = {}): Promise
     PUPUS_CLAUDE_BIN: FAKE_CLAUDE,
     PUPUS_BRIDGE_WORKDIR: workdir,
     PUPUS_INTERRUPT_TIMEOUT_MS: '300',
+    // Never read the real ~/.pupusphone from tests.
+    PUPUS_MEMORY_FILE: join(workdir, 'memory.json'),
+    PUPUS_PROFILE_FILE: join(workdir, 'profile.md'),
     ...env,
   });
   const bridge = await startBridge(config, {

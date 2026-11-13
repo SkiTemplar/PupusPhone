@@ -49,3 +49,23 @@ El proceso de Claude Code del bridge no hereda la configuración del usuario:
 `--permission-mode dontAsk`, `--disable-slash-commands`, prompt de sistema
 propio (`packages/bridge/prompts/voice-system-prompt.md`), directorio de
 trabajo vacío y entorno filtrado (`claude-args.ts`).
+
+## Memoria
+
+El asistente recuerda datos entre conversaciones con dos ficheros fuera del repo
+(el repo es público; no metas datos personales en él):
+
+- `~/.pupusphone/profile.md`: perfil del usuario escrito a mano (texto libre,
+  máximo 8000 caracteres). Solo lectura para el asistente.
+- `~/.pupusphone/memory.json`: datos que el asistente guarda por voz con las
+  herramientas `remember` y `forget` del MCP (máximo 100, de hasta 300 caracteres;
+  con la memoria llena, pide olvidar algo en vez de borrar lo antiguo).
+
+El bridge los lee en cada arranque de Claude y los añade al prompt de sistema, así
+que un dato guardado entra en el prompt en el siguiente arranque (`reset`, cierre
+del modo coche o reinicio tras un fallo); dentro de la misma conversación ya lo
+conoce. Un `memory.json` corrupto se omite con un aviso en el log y nunca se
+sobrescribe. Rutas: `PUPUS_MEMORY_FILE` y `PUPUS_PROFILE_FILE`; vacías, desactivan
+cada parte. En Termux, copia el perfil con
+`adb push profile.md /sdcard/Download/` y, en Termux (con `termux-setup-storage`),
+`cp ~/storage/downloads/profile.md ~/.pupusphone/`.

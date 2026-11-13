@@ -5,7 +5,8 @@
   "type": "module",
   "description": "MCP server (stdio) that controls an Android phone through the PupusPhone Device API.",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./memory": "./src/memory/store.ts"
   },
   "bin": {
     "pupusphone-mcp": "./src/cli.ts"

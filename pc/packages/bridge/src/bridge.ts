@@ -3,6 +3,7 @@ import { buildClaudeLaunch, claudeEnv, writeMcpConfig } from './claude-args.ts';
 import { ClaudeProcess } from './claude-process.ts';
 import type { BridgeConfig } from './config.ts';
 import { log } from './log.ts';
+import { composeSystemPrompt } from './memory-prompt.ts';
 import { startVoiceServer, type RunningVoiceServer } from './server.ts';
 import { VoiceSession, type SpawnFn } from './session.ts';
 import { startStallMonitor } from './stall-monitor.ts';
@@ -38,9 +39,14 @@ export async function startBridge(config: BridgeConfig, overrides: BridgeOverrid
   const env = claudeEnv(config, overrides.env ?? process.env);
   // Written before every spawn, not once: the workdir lives in the temp dir by default and can
   // be wiped while the bridge runs (Termux clears $TMPDIR when its service stops), and a
-  // missing cwd makes every later spawn fail with ENOENT.
+  // missing cwd makes every later spawn fail with ENOENT. The memory is re-read for the same
+  // reason: a respawn picks up the facts saved with remember during the previous process.
   const spawn: SpawnFn = (resume, handlers) =>
-    new ClaudeProcess(buildClaudeLaunch(config, writeMcpConfig(config), systemPrompt, resume), { cwd: config.workdir, env }, handlers);
+    new ClaudeProcess(
+      buildClaudeLaunch(config, writeMcpConfig(config), composeSystemPrompt(systemPrompt, config), resume),
+      { cwd: config.workdir, env },
+      handlers,
+    );
   const mcpConfigPath = writeMcpConfig(config);
 
   const server = await startVoiceServer({ host: config.host, port: config.port, token: config.token, model: config.model });
